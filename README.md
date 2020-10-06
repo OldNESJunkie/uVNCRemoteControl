@@ -39,10 +39,15 @@ VNCRemoteControl is FOR DOMAIN NETWORK USE only. It doesn't work across the inte
 To perform a Remote Control of a machine, the following requirements must be met:
 
 •The machine initiating the session and the target must be running Windows 2000 or higher.
+
 •The machine initiating the session and the target must be in trusted domains.
+
 •The user running the Remote Control executable or clicking the Remote Control action must have administrative privileges on the target machine.
+
 •TCP ports 139, 445 and 5900 must be open on the target machine.
+
 •The Server service, found in Windows Services, must be started on the target machine.
+
 •The administrative shares C$ and ADMIN$ must be accessible on the target machine.
 
 
