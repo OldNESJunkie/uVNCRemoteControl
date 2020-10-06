@@ -1,4 +1,4 @@
-# uVNCRemoteControl
+# uVNC Remote Control
 Frontend for uVNC, like (Gen/Zen)Control
 
 Application:
@@ -46,7 +46,7 @@ To perform a Remote Control of a machine, the following requirements must be met
 •The administrative shares C$ and ADMIN$ must be accessible on the target machine.
 
 
-uVNCRemoteControl 2016..2020. NO RIGHTS RESERVED.
+2016-2020 uVNC Remote Control, NO RIGHTS RESERVED
 
 Do whatever you like with this program. But remember: I / we do not accept any 
 responsibility for any damage caused by (the use of) this software, either direct
@@ -55,7 +55,7 @@ or indirect. Use it at your own risk.
 THE USE OF THIS PROGRAM IS ENTIRELY AT YOUR OWN RISK. Yes. You are allowed to use
 it :-)
 
-uVNCRemoteControl is written in PureBasic (c) Fantaisie Software. uVNCRemoteControl is in
+uVNC Remote Control is written in PureBasic (c) Fantaisie Software. uVNCRemoteControl is in
 no way affiliated with PureBasic or Fantaisie Software, nor do we claim any rights
 to their products. (You should try PureBasic though, it's a great language!)
 
@@ -70,7 +70,7 @@ There is no need to register.
 
 *** SUPPORT ***
 
-uVNCRemoteControl is FREE by design.
+uVNC Remote Control is FREE by design.
 
 
 *** CONTACT ***
