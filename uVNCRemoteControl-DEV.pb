@@ -1047,7 +1047,6 @@ Repeat
    Next
   CloseFile(0)
    DeleteFile("pc.csv",#PB_FileSystem_Force)
-    DeleteFile("adfind.exe",#PB_FileSystem_Force)
  Break
 ForEver
 EndProcedure
@@ -1056,17 +1055,11 @@ Procedure ImportAD()
 myresult=MessageRequester("AD Import","Are you sure you wish to import from AD?"+#CRLF$+"No Domain Controllers, Server OS or Disabled Computers."+#CRLF$+"This will clear your current hosts List.",#PB_MessageRequester_YesNo|#MB_ICONWARNING)
  If myresult=#PB_MessageRequester_Yes
    StatusBarText(#StatusBar0,0,"Please wait, importing from AD...",#PB_StatusBar_Center)
-  If FileSize("adfind.exe")=-1
-    CreateFile(10,"adfind.exe")
-     WriteData(10,?adfindstart,?adfindend-?adfindstart)
-    CloseFile(10)
-  EndIf
    ClearGadgetItems(#Hosts_List)
     SetGadgetText(#String_HostName, "")
      SetGadgetText(#String_Description, "")
       DeleteFile("hosts.dat", #PB_FileSystem_Force)
       RunProgram("cmd","/c adfind -csv -f "+Chr(34)+"(&(objectCategory=computer)(!userAccountControl:1.2.840.113556.1.4.803:=2)(!primaryGroupID=516)(!operatingsystem=Windows Server*))"+Chr(34)+" -sl -nodn name description -nocsvheader -csvnoq > PC.csv","",#PB_Program_Hide|#PB_Program_Wait)
-       ;<--This was before the -f --> -b "+Chr(34)+"DC=ideal,DC=us,DC=com"+Chr(34)+"
      FillListIcon(#Hosts_List,"PC.csv")
     SaveFile()
    StatusBarText(#StatusBar0,0,"Ready",#PB_StatusBar_Center)
@@ -1912,6 +1905,9 @@ SendMessage_(GadgetID(#Hosts_List),#WM_SETREDRAW, #False, 0)
 FillListIcon(#Hosts_List,"hosts.dat")
 SendMessage_(GadgetID(#Hosts_List),#WM_SETREDRAW, #True, 0)
 SetColumnWidths()
+If FileSize("adfind.exe")=-1
+  HideGadget(#App_ImportFromAD,1)
+EndIf
 
 Repeat
 
@@ -2671,16 +2667,12 @@ DataSection
   IncludeBinary "Includes\paexec.exe"
   remoteend:
 
-  adfindstart:
-  IncludeBinary "Includes\adfind.exe"
-  adfindend:
-
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.72 (Windows - x64)
-; CursorPosition = 1583
-; FirstLine = 31
-; Folding = AAAAAAAGAAw
+; CursorPosition = 1908
+; FirstLine = 29
+; Folding = AAAAAAAAEAw
 ; EnableThread
 ; EnableXP
 ; UseIcon = includes\Icon.ico
