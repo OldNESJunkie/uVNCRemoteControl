@@ -1,5 +1,10 @@
 # uVNC Remote Control
 Frontend for uVNC, like (Gen/Zen)Control created with PureBASIC (https://www.purebasic.com/)
+ 
+ -NOTE-
+ For AD Import functionality, you must obtain a copy of ADFind from JoeWare (http://www.joeware.net/freetools/tools/adfind/)
+ Place it in the same directory as uVNCRemoteControl.exe.
+ When you run uVNCRemoteControl.exe a new button will appear in the 'Program Options" tab.
 
 Application:
 
