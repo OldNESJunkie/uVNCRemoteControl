@@ -1,5 +1,5 @@
 # uVNC Remote Control
-Frontend for uVNC, like (Gen/Zen)Control
+Frontend for uVNC, like (Gen/Zen)Control created with PureBASIC (https://www.purebasic.com/)
 
 Application:
 
