@@ -39,7 +39,7 @@ Notes
 
 You MUST specify client IP or name and a description
 
-VNCRemoteControl is FOR DOMAIN NETWORK USE only. It doesn't work across the internet.
+uVNCRemoteControl is FOR DOMAIN NETWORK USE only. It doesn't work across the internet.
 
 To perform a Remote Control of a machine, the following requirements must be met:
 
@@ -69,7 +69,7 @@ uVNC Remote Control is written in PureBasic (c) Fantaisie Software. uVNCRemoteCo
 no way affiliated with PureBasic or Fantaisie Software, nor do we claim any rights
 to their products. (You should try PureBasic though, it's a great language!)
 
-If uVNCRemoteControl or PureBasic uses any other licensed components, you should abide
+If uVNC Remote Control or PureBasic uses any other licensed components, you should abide
 those licenses as well.
 
 
