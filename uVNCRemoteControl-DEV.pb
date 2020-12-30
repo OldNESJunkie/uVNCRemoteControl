@@ -3,10 +3,10 @@
 ;*          By            *
 ;*     OldNESJunkie       *
 ;*      07/03/2015        *
-;*  Updated 03/26/2020    *
+;*  Updated 12/29/2020    *
 ;**************************
-;TODO - Ability to password protect admin features like prompt user,view only, etc???
-;TODO - Encrypt prefs file portions pertaining to admin features
+
+;TODO - Search with 'Next' button for multiple matches or filtering the listview
 
 ;  *******************
 ;  * Embed Help Text *
@@ -16,6 +16,23 @@ DataSection
   IncludeBinary ("includes\VNCHelp.txt")
   Data.l 0
 EndDataSection
+;}
+
+;  *********************
+;  * Define Prototypes *
+;{ *********************
+Prototype ProcessFirst(Snapshot, Process)
+Prototype ProcessNext(Snapshot, Process)
+;}
+
+;  *********************
+;  * Define Structures *
+;{ *********************
+Structure VNCList
+ VNCPID.i
+ VNCSelection.i
+ VNCHostName.s
+EndStructure
 ;}
 
 ;  ***************************
@@ -33,6 +50,10 @@ Global Ping_Port = IcmpCreateFile_()
 Global myname.s=GetEnvironmentVariable("username")
 Global PasswordHash.s, connectsuccess.i
 Global p_myhelptext.i = ?p_helptext
+Global selection, myid.l, myprog.l, selectedid
+Global ProcessFirst.ProcessFirst
+Global ProcessNext.ProcessNext
+Global NewList MyVNCList.VNCList()
 ;}
 
 ;  ******************************
@@ -56,6 +77,8 @@ Enumeration
 #Options_1
 ;Gadgets
 #Hosts_List
+#PC_Checked
+#PC_Image
 #Text_HostName
 #String_HostName
 #Text_Description
@@ -63,6 +86,7 @@ Enumeration
 #Connect_Button
 #Text_Search
 #String_Search
+#Search_Next
 #StatusBar0
 ;Server Options Panel
 #Frame_1
@@ -76,7 +100,6 @@ Enumeration
 #Server_DisconnectLogoff
 #Server_EnableDriver
 #Server_EnableFileTransfers
-#Server_EnableHookDLL
 #Server_IdleTimeout
 #Server_MaxCPU
 #String_MaxCPU
@@ -128,10 +151,24 @@ EndEnumeration
 ;  **************
 ;  * Procedures *
 ;{ **************
-
+Declare.l FileOp(FromLoc.s, ToLoc.s, Flag)
+Declare WriteLog(filename.s, error.s)
 ;     ===================
 ;     | Windows/Gadgets |
 ;{    ===================
+Procedure FindPartWin(part$)
+  r=GetWindow_(GetDesktopWindow_(),#GW_CHILD)
+  Repeat
+    t$=Space(999) : GetWindowText_(r,t$,999)
+    If FindString(LCase(t$), LCase(part$),1)<>0 And IsWindowVisible_(r)=#True
+      w=r
+    Else
+      r=GetWindow_(r,#GW_HWNDNEXT)
+    EndIf
+  Until r=0 Or w<>0
+  ProcedureReturn w
+EndProcedure
+
 Procedure.s IdleTimeout(Title$)
   Protected Window, Trackme, OK, myidle, setme, mystate
 GetWindowRect_(WindowID(#Window_0),win.RECT); Store its dimensions in "win" structure.
@@ -391,6 +428,119 @@ If getsecondcolumnwidth < secondcolumnwidth
 SendMessage_(GadgetID(#Hosts_List), #LVM_SETCOLUMNWIDTH, 1, #LVSCW_AUTOSIZE_USEHEADER)
 EndIf
 EndProcedure
+
+Procedure Match(FirstString.s,SecondString.s,Type.b,CaseSensitive.b) 
+  If CaseSensitive=#False
+    FirstString=LCase(FirstString)
+    SecondString=LCase(SecondString)
+  EndIf
+
+  Select Type
+
+    Case 0
+      If FindString(FirstString,SecondString)
+        ProcedureReturn #True
+      EndIf
+
+    Case 1
+      If FirstString=SecondString
+        ProcedureReturn #True
+      EndIf
+
+    Case 2
+      If Left(FirstString,Len(SecondString))=SecondString
+        ProcedureReturn #True
+      EndIf
+
+    Case 3
+      If Right(FirstString,Len(SecondString))=SecondString
+        ProcedureReturn #True
+      EndIf
+
+  EndSelect
+EndProcedure
+
+Procedure.s GetPidProcessEx(Name.s)
+  ;/// Return all process id as string separate by comma
+  ;/// Author : jpd
+  Protected ProcLib
+  Protected ProcName.s
+  Protected Process.PROCESSENTRY32
+  Protected x
+  Protected retval=#False
+  Name=UCase(Name.s)
+  ProcLib= OpenLibrary(#PB_Any, "Kernel32.dll") 
+  If ProcLib
+    CompilerIf #PB_Compiler_Unicode
+      ProcessFirst           = GetFunction(ProcLib, "Process32FirstW") 
+      ProcessNext            = GetFunction(ProcLib, "Process32NextW") 
+    CompilerElse
+      ProcessFirst           = GetFunction(ProcLib, "Process32First") 
+      ProcessNext            = GetFunction(ProcLib, "Process32Next") 
+    CompilerEndIf
+    If  ProcessFirst And ProcessNext 
+      Process\dwSize = SizeOf(PROCESSENTRY32) 
+      Snapshot =CreateToolhelp32Snapshot_(#TH32CS_SNAPALL,0)
+      If Snapshot 
+        ProcessFound = ProcessFirst(Snapshot, Process) 
+        x=1
+        While ProcessFound 
+          ProcName=PeekS(@Process\szExeFile)
+          ProcName=GetFilePart(ProcName)
+          If UCase(ProcName)=UCase(Name)
+            If ProcessList.s<>"" : ProcessList+",": EndIf
+            ProcessList+Str(Process\th32ProcessID)
+          EndIf
+          ProcessFound = ProcessNext(Snapshot, Process) 
+          x=x+1  
+        Wend 
+      EndIf 
+      CloseHandle_(Snapshot) 
+    EndIf 
+    CloseLibrary(ProcLib) 
+  EndIf 
+  ProcedureReturn ProcessList
+
+EndProcedure
+
+Procedure SetGadgetIcons()
+Protected position
+
+For position = 0 To CountGadgetItems(#Hosts_List)
+  SetGadgetItemImage(#Hosts_List,position,CatchImage(#PC_Image,?PC16))
+Next
+
+EndProcedure
+
+Procedure CheckRunningProcesses()
+ If ListSize(MyVNCList())>0
+   ResetList(MyVNCList())
+  While NextElement(MyVNCList())
+    myproc.s=GetPidProcessEx("vncviewer.exe")
+   If match(myproc,Str(MyVNCList()\VNCPID),0,#False) = #True
+     SetGadgetItemImage(#Hosts_List,MyVNCList()\VNCSelection,CatchImage(#PC_Checked,?PCChecked16))
+      SetGadgetItemData(#Hosts_List,MyVNCList()\VNCSelection,1)
+   Else
+     WriteLog(myhostname,"uVNC viewer closed on localhost - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+      StatusBarText(#StatusBar0,0,"Removing uVNC from "+MyVNCList()\VNCHostName,#PB_StatusBar_Center) 
+       UpdateWindow_(WindowID(#Window_0))
+        WriteLog(myhostname,"Removing uVNC service on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+         RunProgram("paexec","\\"+MyVNCList()\VNCHostName+" C:\RCTemp\winvnc -uninstall","",#PB_Program_Hide|#PB_Program_Wait)
+          RunProgram("taskkill","/s \\"+MyVNCList()\VNCHostName+" /f /im winvnc.exe","",#PB_Program_Hide|#PB_Program_Wait)
+           WriteLog(myhostname,"Removing uVNC files on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+            FileOp("\\"+MyVNCList()\VNCHostName+"\C$\RCTemp","",#FO_DELETE)
+             DeleteFile("view\"+MyVNCList()\VNCHostName+".vnc", #PB_FileSystem_Force)
+              DeleteFile("view\options.vnc", #PB_FileSystem_Force)
+               SetGadgetItemImage(#Hosts_List,MyVNCList()\VNCSelection,CatchImage(#PC_Image,?PC16))
+                SetGadgetItemData(#Hosts_List,MyVNCList()\VNCSelection,0)
+                 StatusBarText(#StatusBar0,0,"Ready",#PB_StatusBar_Center) 
+                  DeleteElement(MyVNCList())
+                   WriteLog(myhostname,"All operations completed successfully - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+                    WriteLog(myhostname,"");For spacing
+   EndIf
+  Wend
+ EndIf
+EndProcedure
 ;}
 
 ;     ===========
@@ -541,18 +691,6 @@ CreateFile(3,"Serve\ddengine64.dll")
 CloseFile(3)
 EndIf
 
-If FileSize("Serve\vnchooks.dll")=-1
-CreateFile(4,"Serve\vnchooks.dll")
- WriteData(4,?vnchook64start,?vnchook64end-?vnchook64start)
-CloseFile(4)
-EndIf
-
-If FileSize("Serve\schook64.dll")=-1
-CreateFile(5,"Serve\schook64.dll")
- WriteData(5,?schook64start,?schook64end-?schook64start)
-CloseFile(5)
-EndIf
-
 If FileSize("Serve86\winvnc.exe")=-1
 CreateFile(6,"Serve86\winvnc.exe")
  WriteData(6,?server32start,?server32end-?server32start)
@@ -563,18 +701,6 @@ If FileSize("Serve86\ddengine.dll")=-1
 CreateFile(7,"Serve86\ddengine.dll")
  WriteData(7,?ddengine32start,?ddengine32end-?ddengine32start)
 CloseFile(7)
-EndIf
-
-If FileSize("Serve86\vnchooks.dll")=-1
-CreateFile(8,"Serve86\vnchooks.dll")
- WriteData(8,?vnchook32start,?vnchook32end-?vnchook32start)
-CloseFile(8)
-EndIf
-
-If FileSize("Serve86\schook.dll")=-1
-CreateFile(9,"Serve86\schook.dll")
- WriteData(9,?schook32start,?schook32end-?schook32start)
-CloseFile(9)
 EndIf
 
 If FileSize("paexec.exe")=-1
@@ -671,7 +797,7 @@ EndProcedure
 Procedure.i CreateViewerConfigFile(hostname.s)
   Protected.i File, Result
   ;Create the file if it doesn't exist
-  File = CreateFile(#PB_Any, "View\myconfig.vnc")
+  File = CreateFile(#PB_Any, "View\"+hostname+".vnc")
   If File
     WriteStringN(File, "[connection]", #PB_Ascii)
     WriteStringN(File, "host=" + hostname, #PB_Ascii)
@@ -975,13 +1101,7 @@ ClosePreferences()
     WriteString(File, "EnableDriver=0", #PB_Ascii);Dont' use ddengine64.dll
   EndIf
 ;**********************************
-; Enable VNCHook
-  If GetGadgetState(#Server_EnableHookDLL)<>0
-    WriteStringN(File, "EnableHook=1", #PB_Ascii);Use vnchooks.dll
-  Else
     WriteStringN(File, "EnableHook=0", #PB_Ascii);Use vnchooks.dll
-  EndIf
-;***************
     WriteStringN(File, "EnableVirtual=0", #PB_Ascii)
     WriteStringN(File, "SingleWindow=0", #PB_Ascii)
     WriteStringN(File, "SingleWindowName=", #PB_Ascii)
@@ -1260,9 +1380,9 @@ EndProcedure
 Procedure CreateConnection(hostname.s)
 Protected checkvnc, connectsuccess, isrunning.s, myip.s, myos.s, pingresult, success
 
-checkvnc=0 ; Used when checking to see if the UltraVNC service is started on remote PC
-success=0 ; Used to add host to list only if connection was successful
-connectsuccess=0 ; Used to save if last connection attempt was successful
+checkvnc=0; Used when checking to see if the UltraVNC service is started on remote PC
+success=0; Used to add host to list only if connection was successful
+connectsuccess=0; Used to save if last connection attempt was successful
 While WaitWindowEvent(1)
 DisableGadget(#Panel_1,1):DisableGadget(#Text_HostName,1):DisableGadget(#Text_Description,1):DisableGadget(#Text_Search,1):DisableGadget(#String_Hostname,1):DisableGadget(#String_Description,1):DisableGadget(#String_Search,1)
 Wend
@@ -1372,7 +1492,6 @@ result=InitNetwork()
      success=1
       StatusBarText(#StatusBar0,0,"Found uVNC running on "+myhostname+", starting uVNC viewer",#PB_StatusBar_Center)
       While WindowEvent():Wend;Refresh status bar
-     HideWindow(#Window_0,#True)
     Goto carryon
   EndIf
  EndIf
@@ -1382,21 +1501,30 @@ carryon:
  While WindowEvent():Wend;Refresh status bar
   Delay(2000)
    WriteLog(myhostname,"Starting uVNC viewer on localhost - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-    RunProgram("vncviewer","-config myconfig.vnc", "View",#PB_Program_Wait)
-     connectsuccess=1
-      WriteLog(myhostname,"uVNC viewer closed on localhost - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+    myprog=RunProgram("view\vncviewer","-config view\"+hostname+".vnc","",#PB_Program_Open|#PB_Program_Read|#PB_Program_Unicode)
+   If IsProgram(myprog)
+     myid=ProgramID(myprog)
+      AddElement(MyVNCList())
+       MyVNCList()\VNCPID = myid
+       MyVNCList()\VNCSelection = selection
+       MyVNCList()\VNCHostName = hostname
+      connectsuccess=1
+    If SearchListIcon(#Hosts_List,GetGadgetText(#String_HostName),@Pos)=#False; Find if duplicate
+      AddGadgetItem(#Hosts_List,0,GetGadgetText(#String_HostName)+Chr(10)+GetGadgetText(#String_Description))
+       SetGadgetItemImage(#Hosts_List,0,CatchImage(#PC_Checked,?PCChecked16))
+        SetColumnWidths()
+       OpenFile(0,"hosts.dat",#PB_File_Append)
+        WriteStringN(0,GetGadgetText(#String_HostName)+Chr(44)+GetGadgetText(#String_Description))
+       CloseFile(0)
+    EndIf
+   Else
+     connectsuccess=0
+      WriteLog(myhostname,"Could not capture the uVNC Viewer process, exiting - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+   EndIf
 
 theend:
 
- HideWindow(#Window_0,#False)
-  While WindowEvent():Wend;Refresh status bar
-  StatusBarText(#StatusBar0,0,"Removing uVNC from "+myhostname,#PB_StatusBar_Center) 
-   UpdateWindow_(WindowID(#Window_0))
-    WriteLog(myhostname,"Removing uVNC service on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-     RunProgram("paexec","\\"+myhostname+" C:\RCTemp\winvnc -uninstall","",#PB_Program_Hide|#PB_Program_Wait)
-      RunProgram("taskkill","/s \\"+myhostname+" /f /im winvnc.exe","",#PB_Program_Hide|#PB_Program_Wait)
-       WriteLog(myhostname,"Removing uVNC files on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-        FileOp("\\"+myhostname+"\C$\RCTemp","",#FO_DELETE)
+While WindowEvent():Wend;Refresh status bar
 
 osfailure:
 
@@ -1416,24 +1544,8 @@ EndIf
        connectsuccess=0
   EndIf
  EndIf
-   WriteLog(myhostname,"Restoring application window on localhost - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-  If success=1
-    WriteLog(myhostname,"Adding computer to hosts list - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-   If SearchListIcon(#Hosts_List,GetGadgetText(#String_HostName),@Pos)=#False; Find if duplicate
-     AddGadgetItem(#Hosts_List,0,GetGadgetText(#String_HostName)+Chr(10)+GetGadgetText(#String_Description))
-       SetColumnWidths()
-      OpenFile(0,"hosts.dat",#PB_File_Append)
-       WriteStringN(0,GetGadgetText(#String_HostName)+Chr(44)+GetGadgetText(#String_Description))
-      CloseFile(0)
-   EndIf
-  EndIf
    WriteLog(myhostname,"Removing the uVNC configuration files on localhost - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-    DeleteFile("view\myconfig.vnc", #PB_FileSystem_Force)
-     DeleteFile("view\options.vnc", #PB_FileSystem_Force)
-      DeleteFile("serve\ultravnc.ini", #PB_FileSystem_Force)
       StatusBarText(#StatusBar0,0,"Ready",#PB_StatusBar_Center)
-     WriteLog(myhostname,"All operations completed successfully - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-    WriteLog(myhostname,"");For spacing
    DisableGadget(#Panel_1,0):DisableGadget(#Text_HostName,0):DisableGadget(#Text_Description,0):DisableGadget(#Text_Search,0):DisableGadget(#String_Hostname,0):DisableGadget(#String_Description,0):DisableGadget(#String_Search,0)
   Else
     MessageRequester("Error","Cannot connect to "+myhostname+"."+#CRLF$+"Make sure the computer is turned on and connected to the network.",#MB_ICONERROR)
@@ -1484,7 +1596,6 @@ If OpenPreferences("vnc.prefs")=0
     WritePreferenceInteger("DisableScreensaver", 0)
     WritePreferenceInteger("DisableTrayIcon", 0)
     WritePreferenceInteger("EnableDriver", 0)
-    WritePreferenceInteger("EnableHook", 0)
     WritePreferenceInteger("PromptUser", 0)
     WritePreferenceInteger("DisconnectAction", 0)
     WritePreferenceInteger("SemitransparentWindows", 0)
@@ -1526,7 +1637,6 @@ savelastconnect.i=ReadPreferenceInteger("LoadLastConnect", 0)
    noscreensave.i=ReadPreferenceInteger("DisableScreensaver", 0)
     disabletray.i=ReadPreferenceInteger("DisableTrayIcon", 0)
    enabledriver.i=ReadPreferenceInteger("EnableDriver" ,0)
-     enablehook.i=ReadPreferenceInteger("EnableHook", 0)
        promptme.i=ReadPreferenceInteger("PromptUser", 0)
      disconnect.i=ReadPreferenceInteger("DisconnectAction", 0)
 semitransparent.i=ReadPreferenceInteger("SemitransparentWindows", 0)
@@ -1555,12 +1665,12 @@ EndIf
 ;  *******************************************************
 ;  * Code to ensure only one instance of program running *
 ;{ *******************************************************
-MutexID=CreateMutex_(0,1,"VNC Remote Control")
-MutexError=GetLastError_()
-If MutexID=0 Or MutexError<>0
-  MessageRequester("Error","VNC Remote Control is already running.",#MB_ICONWARNING)
-  End
-EndIf
+ MutexID=CreateMutex_(0,1,"uVNC Remote Control")
+ MutexError=GetLastError_()
+ If MutexID=0 Or MutexError<>0
+   MessageRequester("Error","uVNC Remote Control is already running.",#MB_ICONWARNING)
+   End
+ EndIf
 ;}
 
 ;  **************************************
@@ -1568,6 +1678,7 @@ EndIf
 ;{ **************************************
 OpenWindow(#Window_0,lastx,lasty,450,450,"uVNC Remote Control",#PB_Window_SystemMenu|#PB_Window_MinimizeGadget)
  SetWindowCallback(@ColumnClickCallback(), #Window_0)
+  AddWindowTimer(#Window_0,9999,1)
 PanelGadget(#Panel_1,0,0,453,430)
 ;{ Connections
  AddGadgetItem(#Panel_1,-1,"Connections")
@@ -1590,8 +1701,9 @@ PanelGadget(#Panel_1,0,0,453,430)
   ButtonGadget(#Connect_Button,336,317,100,75,"Connect")
   HyperLinkGadget(#Text_Search,10,377,40,20,"Search:",#Blue)
    BalloonTip(#Window_0,#Text_Search,"Click to clear the search field","",#MB_ICONINFORMATION)
-   StringGadget(#String_Search,80,375,250,20,"")
+   StringGadget(#String_Search,80,375,195,20,"")
     SendMessage_(GadgetID(#String_Search),#EM_SETCUEBANNER,#True,@"Enter Search Parameters")
+  ButtonGadget(#Search_Next,281,375,50,20,"Next")
    AddKeyboardShortcut(#Window_0,#PB_Shortcut_Return,#Menu_EnterKey)
 CreateStatusBar(#StatusBar0, WindowID(#Window_0))
 AddStatusBarField(#PB_Ignore)
@@ -1613,14 +1725,13 @@ FrameGadget(#Frame_1,10,10,425,380,"Server")
    OptionGadget(#Server_DisconnectLogoff,100,170,170,20,"Log Off Remote Workstation")
  CheckBoxGadget(#Server_EnableDriver,95,200,155,20,"Enable DDEngine Driver")
  CheckBoxGadget(#Server_EnableFileTransfers,95,220,150,20,"Enable File Transfers")
- CheckBoxGadget(#Server_EnableHookDLL,95,240,150,20,"Enable VNChooks.dll")
- ButtonGadget(#Server_IdleTimeout,95,260,150,20,"Idle Timeout")
- CheckBoxGadget(#Server_MultiMonitorSupport,95,280,150,20,"Multi-Monitor Support")
- CheckBoxGadget(#Server_OnlyPollOnEvent,95,300,195,20,"Only Poll on Event (KB/Mouse)")
- CheckBoxGadget(#Server_RDPMode,95,320,150,20,"RDP Mode")
- CheckBoxGadget(#Server_RemoveWallpaper,95,340,120,20,"Remove Wallpaper")
- CheckBoxGadget(#Server_MaxCPU,95,360,155,20,"Set Maximum CPU Usage:")
-  StringGadget(#String_MaxCPU,252,359,50,20,"40",#PB_String_Numeric)
+  ButtonGadget(#Server_IdleTimeout,94,240,150,20,"Idle Timeout")
+ CheckBoxGadget(#Server_MultiMonitorSupport,95,260,150,20,"Multi-Monitor Support")
+ CheckBoxGadget(#Server_OnlyPollOnEvent,95,280,195,20,"Only Poll on Event (KB/Mouse)")
+ CheckBoxGadget(#Server_RDPMode,95,300,150,20,"RDP Mode")
+ CheckBoxGadget(#Server_RemoveWallpaper,95,320,120,20,"Remove Wallpaper")
+ CheckBoxGadget(#Server_MaxCPU,95,340,155,20,"Set Maximum CPU Usage:")
+  StringGadget(#String_MaxCPU,252,339,50,20,"40",#PB_String_Numeric)
    DisableGadget(#String_MaxCPU,1)
 CloseGadgetList()
 ;}
@@ -1651,8 +1762,8 @@ AddGadgetItem(#Panel_1,-1,"Program Options")
      CheckBoxGadget(#App_RemoveFilesOnExit,95,90,150,20,"Remove App Files on Exit")
       CheckBoxGadget(#App_SaveWindowPosition,95,110,140,20,"Save Window Position")
        CheckBoxGadget(#App_SortHostsOnExit,95,130,150,20,"Sort Hosts On Exit (A-Z)")
-        ButtonGadget(#App_ClearHostsList,95,160,130,30,"Clear Hosts List")
-         ButtonGadget(#App_ImportFromAD,95,200,130,30,"Import Hosts from AD")
+        ButtonGadget(#App_ClearHostsList,95,150,130,30,"Clear Hosts List")
+         ButtonGadget(#App_ImportFromAD,95,190,130,30,"Import Hosts from AD")
           ButtonGadget(#App_Help,280,350,120,30,"Help")
            If FileSize("Update uVNC.exe")<>-1
             ButtonGadget(#App_Update,15,350,120,30,"Check for Update")
@@ -1672,10 +1783,10 @@ AddGadgetItem(#Panel_1,-1,"About")
                                          "by" + #CRLF$ +
 	                                       "Daniel Ford" + #CRLF$ +
                                          "oldnesjunkie@gmail.com" + #CRLF$ +
-	                                       "Version 1.0i - May 28, 2020" + #CRLF$ +
+	                                       "Version 1.0L - December 29, 2020" + #CRLF$ +
                                          "Uses ADFind version 1.52.00" + #CRLF$ +
                                          "Uses PAExec Version 1.27" + #CRLF$ +
-                                         "Uses UltraVNC Version 1.2.4.0" + #CRLF$ + #CRLF$ +
+                                         "Uses UltraVNC Version 1.3.2" + #CRLF$ + #CRLF$ +
                                          "Created with the following from the PureBasic Forums:"+#CRLF$+
                                          "ListIcon Sort by netmaestro"+#CRLF$+
                                          "SearchListIcon by infratec")
@@ -1855,12 +1966,6 @@ If polleventonly=1
    SetGadgetState(#Server_OnlyPollOnEvent, 1)
 EndIf
 
-;Enable Hook DLL
-If enablehook=1
-  flip28=1
-   SetGadgetState(#Server_EnableHookDLL, 1)
-EndIf
-
 ;Set Maximum CPU Usage
 If maxcpu=1
   flip29=1
@@ -1901,9 +2006,8 @@ EndIf
 ;{ *********************
 
 ;Add items to Hosts List
-SendMessage_(GadgetID(#Hosts_List),#WM_SETREDRAW, #False, 0)
 FillListIcon(#Hosts_List,"hosts.dat")
-SendMessage_(GadgetID(#Hosts_List),#WM_SETREDRAW, #True, 0)
+SetGadgetIcons()
 SetColumnWidths()
 If FileSize("adfind.exe")=-1
   HideGadget(#App_ImportFromAD,1)
@@ -1912,6 +2016,12 @@ EndIf
 Repeat
 
   event=WaitWindowEvent(1)
+
+;{ Process Testing/Remove VNC
+If event = #PB_Event_Timer And EventTimer() = 9999
+CheckRunningProcesses()
+EndIf
+;}
 
 ;{ Disable Gadgets
    If CountGadgetItems(#Hosts_List)=0
@@ -1925,6 +2035,12 @@ Repeat
    Else
       DisableGadget(#Connect_Button,1)
    EndIf
+
+  If GetGadgetText(#String_Search) =""
+    DisableGadget(#Search_Next,1)
+  Else
+    DisableGadget(#Search_Next,0)
+  EndIf
 ;}
 
 ;  *******************
@@ -1952,7 +2068,8 @@ Repeat
 
        Case #Connect_Button
          SetGadgetText(#String_Search,"")
-          ConnectHostButton()
+          selection=GetGadgetState(#Hosts_List)
+           ConnectHostButton()
 
        Case #String_Search
          If EventType()=#PB_EventType_Change
@@ -2082,20 +2199,6 @@ Repeat
             SetGadgetState(#Server_EnableFileTransfers,0)
              OpenPreferences("vnc.prefs")
               WritePreferenceInteger("FileXfers",0)
-               ClosePreferences()
-          EndIf
-
-        Case #Server_EnableHookDLL
-          flip28=1-flip28
-          If flip28=1
-            SetGadgetState(#Server_EnableHookDLL,1)
-             OpenPreferences("vnc.prefs")
-              WritePreferenceInteger("EnableHook",1)
-               ClosePreferences()
-          Else
-            SetGadgetState(#Server_EnableHookDLL,0)
-             OpenPreferences("vnc.prefs")
-              WritePreferenceInteger("EnableHook",0)
                ClosePreferences()
           EndIf
 
@@ -2350,6 +2453,7 @@ Repeat
 ;}
 
 ;{ ***App Options***
+
         Case #App_EnableScrollLock; Enable Hotkey Support
           flip30=1-flip30
           If flip30=1
@@ -2505,7 +2609,14 @@ Repeat
          Select eventgadget
 
            Case #Hosts_List
-             ConnectHostMouse()
+             selection=GetGadgetState(#Hosts_List)
+              If GetGadgetItemData(#Hosts_List,selection)=0
+                ConnectHostMouse()
+              ElseIf GetGadgetItemData(#Hosts_List,selection)=1
+                serverselection.s=GetGadgetItemText(#Hosts_List,selection,0)
+                 myhwnd=FindPartWin(serverselection)
+                  ShowWindow_(myhwnd,#SW_RESTORE)
+              EndIf
 
          EndSelect
 
@@ -2635,14 +2746,6 @@ DataSection
   IncludeBinary "Includes\VNC86\ddengine.dll"
   ddengine32end:
 
-  vnchook32start:
-  IncludeBinary "Includes\VNC86\vnchooks.dll"
-  vnchook32end:
-
-  schook32start:
-  IncludeBinary "Includes\VNC86\schook.dll"
-  schook32end:
-
   viewer64start:
   IncludeBinary "Includes\VNC\vncviewer.exe"
   viewer64end:
@@ -2655,24 +2758,21 @@ DataSection
   IncludeBinary "Includes\VNC\ddengine64.dll"
   ddengine64end:
 
-  vnchook64start:
-  IncludeBinary "Includes\VNC\vnchooks.dll"
-  vnchook64end:
-
-  schook64start:
-  IncludeBinary "Includes\VNC\schook64.dll"
-  schook64end:
-
   remotestart:
   IncludeBinary "Includes\paexec.exe"
   remoteend:
 
+  PC16:
+  IncludeBinary ".\gfx\monitor16.ico"
+
+  PCChecked16:
+  IncludeBinary ".\gfx\monitor16on.ico";".\gfx\monitor16onchecked.ico"
+
 EndDataSection 
 ;}
-; IDE Options = PureBasic 5.72 (Windows - x64)
-; CursorPosition = 1908
-; FirstLine = 29
-; Folding = AAAAAAAAEAw
+; IDE Options = PureBasic 5.73 LTS (Windows - x64)
+; CursorPosition = 7
+; Folding = AAAAAAAAAAAA+
 ; EnableThread
 ; EnableXP
 ; UseIcon = includes\Icon.ico
