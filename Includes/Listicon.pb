@@ -578,6 +578,7 @@ EndProcedure
 
 Procedure FillListIcon(gadget, filename.s)
    If ReadFile(0,filename)
+    SendMessage_(GadgetID(gadget),#WM_SETREDRAW, #False, 0)
      With nslist()
        While Eof(0)=0
          a$=ReadString(0,ReadStringFormat(0))
@@ -592,8 +593,10 @@ Procedure FillListIcon(gadget, filename.s)
    ForEach nslist()
      AddGadgetItem(gadget,-1,nslist()\myhostname+Chr(10)+nslist()\mydescription);<--Added extra Chr(10) at front
    Next
-    ClearList(nslist()) 
+    ;ClearList(nslist())
+    FreeList(nslist())
      CloseFile(0)
+      SendMessage_(GadgetID(gadget),#WM_SETREDRAW, #True, 0)
    EndIf
 EndProcedure
 
@@ -694,9 +697,10 @@ SetGadgetState(Gadget,y)
   ProcedureReturn Found
 
 EndProcedure
-; IDE Options = PureBasic 5.71 LTS (Windows - x64)
+; IDE Options = PureBasic 5.73 LTS (Windows - x64)
 ; CursorPosition = 4
 ; Folding = AAAw
 ; EnableXP
+; Executable = C:\Temp\uVNCRemoteControl.exe
 ; DisableDebugger
 ; EnableUnicode
