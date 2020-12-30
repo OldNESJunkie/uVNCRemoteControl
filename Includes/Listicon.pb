@@ -593,8 +593,7 @@ Procedure FillListIcon(gadget, filename.s)
    ForEach nslist()
      AddGadgetItem(gadget,-1,nslist()\myhostname+Chr(10)+nslist()\mydescription);<--Added extra Chr(10) at front
    Next
-    ;ClearList(nslist())
-    FreeList(nslist())
+    ClearList(nslist())
      CloseFile(0)
       SendMessage_(GadgetID(gadget),#WM_SETREDRAW, #True, 0)
    EndIf
@@ -698,9 +697,10 @@ SetGadgetState(Gadget,y)
 
 EndProcedure
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 4
+; CursorPosition = 596
+; FirstLine = 33
 ; Folding = AAAw
 ; EnableXP
-; Executable = C:\Temp\uVNCRemoteControl.exe
+; Executable = ..\..\uVNCRemoteControl.exe
 ; DisableDebugger
 ; EnableUnicode
