@@ -1456,14 +1456,6 @@ result=InitNetwork()
      RunProgram("paexec","\\"+myhostname+" C:\RCTemp\winvnc -install","",#PB_Program_Hide|#PB_Program_Wait)
     WriteLog(myhostname,"Checking uVNC service status on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
    While WindowEvent():Wend;Refresh status bar
-;Enable Scroll Lock
-If GetGadgetState(#App_EnableScrollLock)=1
- If GetKeyState_(#VK_SCROLL)=0
-  keybd_event_(#VK_SCROLL,0,0,0)
-   keybd_event_(#VK_SCROLL,0,#KEYEVENTF_KEYUP,0)
- EndIf
-EndIf
-;*****************************************************
   StatusBarText(#StatusBar0,0,"Checking uVNC status on "+myhostname,#PB_StatusBar_Center)
  Sleep_(2000)
 
@@ -1508,6 +1500,14 @@ carryon:
        MyVNCList()\VNCPID = myid
        MyVNCList()\VNCSelection = selection
        MyVNCList()\VNCHostName = hostname
+;Enable Scroll Lock
+    If GetGadgetState(#App_EnableScrollLock)=1
+     If GetKeyState_(#VK_SCROLL)=0
+       keybd_event_(#VK_SCROLL,0,0,0)
+        keybd_event_(#VK_SCROLL,0,#KEYEVENTF_KEYUP,0)
+     EndIf
+    EndIf
+;*****************************************************
       connectsuccess=1
     If SearchListIcon(#Hosts_List,GetGadgetText(#String_HostName),@Pos)=#False; Find if duplicate
       AddGadgetItem(#Hosts_List,0,GetGadgetText(#String_HostName)+Chr(10)+GetGadgetText(#String_Description))
@@ -1528,14 +1528,6 @@ While WindowEvent():Wend;Refresh status bar
 
 osfailure:
 
-;Disable Scroll Lock
-If GetGadgetState(#App_EnableScrollLock)=1
- If GetKeyState_(#VK_SCROLL)=1
-  keybd_event_(#VK_SCROLL,0,0,0)
-   keybd_event_(#VK_SCROLL,0,#KEYEVENTF_KEYUP,0)
- EndIf
-EndIf
-;*****************************************************
  If connectsuccess=1
   If GetGadgetText(#String_HostName) And GetGadgetText(#String_Description)<>""
     OpenPreferences("vnc.prefs")
@@ -2697,6 +2689,15 @@ EndIf
 ;  *************************
 ;{ ***Close Window Events***
    Case #PB_Event_CloseWindow
+    If FindPartWin("- service mode")
+     myanswer=MessageRequester("Warning","There are active uVNC Viewer sessions."+#CRLF$+"Do you want to close the application?"+#CRLF$+"This will leave uVNC running on the remote computer(s)."+#CRLF$+"You will have to reconnect and close normally to remove the service.",#PB_MessageRequester_YesNo|#MB_ICONWARNING)
+     If myanswer=#PB_MessageRequester_Yes
+       Goto closeapp
+     Else
+       ;do nothing
+     EndIf
+    Else
+     closeapp:
      SetWindowState(#Window_0,#PB_Window_Normal)
       If GetGadgetState(#App_RemoveFilesOnExit)=1
         DeleteDirectory("View", "", #PB_FileSystem_Recursive| #PB_FileSystem_Force)
@@ -2704,6 +2705,12 @@ EndIf
           DeleteDirectory("Serve86", "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
            DeleteFile("paexec.exe", #PB_FileSystem_Force)
       EndIf
+       If GetGadgetState(#App_EnableScrollLock)=1
+        If GetKeyState_(#VK_SCROLL)=1
+          keybd_event_(#VK_SCROLL,0,0,0)
+           keybd_event_(#VK_SCROLL,0,#KEYEVENTF_KEYUP,0)
+        EndIf
+       EndIf
           If flip5=1
             OpenPreferences("vnc.prefs")
              WritePreferenceInteger("LastX",WindowX(#Window_0))
@@ -2723,6 +2730,7 @@ EndIf
             ReleaseMutex_(MutexID)
              CloseHandle_(MutexID)
           End
+    EndIf
 ;}
 ;  *************************
 
@@ -2776,7 +2784,7 @@ EndDataSection
 ; EnableThread
 ; EnableXP
 ; UseIcon = includes\Icon.ico
-; Executable = C:\Temp\uVNCRemoteControl.exe
+; Executable = ..\uVNCRemoteControl.exe
 ; Debugger = IDE
 ; Warnings = Display
 ; IncludeVersionInfo
