@@ -537,6 +537,14 @@ Procedure CheckRunningProcesses()
                   DeleteElement(MyVNCList())
                    WriteLog(myhostname,"All operations completed successfully - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
                     WriteLog(myhostname,"");For spacing
+      If FindPartWin("- service mode")=#False
+       If GetGadgetState(#App_EnableScrollLock)=1
+        If GetKeyState_(#VK_SCROLL)=1
+          keybd_event_(#VK_SCROLL,0,0,0)
+           keybd_event_(#VK_SCROLL,0,#KEYEVENTF_KEYUP,0)
+        EndIf
+       EndIf
+      EndIf
    EndIf
   Wend
  EndIf
@@ -2689,7 +2697,7 @@ EndIf
 ;  *************************
 ;{ ***Close Window Events***
    Case #PB_Event_CloseWindow
-    If FindPartWin("- service mode")
+    If FindPartWin("- service mode") Or FindPartWin("- connection dropped")
      myanswer=MessageRequester("Warning","There are active uVNC Viewer sessions."+#CRLF$+"Do you want to close the application?"+#CRLF$+"This will leave uVNC running on the remote computer(s)."+#CRLF$+"You will have to reconnect and close normally to remove the service.",#PB_MessageRequester_YesNo|#MB_ICONWARNING)
      If myanswer=#PB_MessageRequester_Yes
        Goto closeapp
@@ -2779,12 +2787,12 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 7
+; CursorPosition = 8
 ; Folding = AAAAAAAAAAAA+
 ; EnableThread
 ; EnableXP
 ; UseIcon = includes\Icon.ico
-; Executable = ..\uVNCRemoteControl.exe
+; Executable = C:\Temp\uVNCRemoteControl.exe
 ; Debugger = IDE
 ; Warnings = Display
 ; IncludeVersionInfo
