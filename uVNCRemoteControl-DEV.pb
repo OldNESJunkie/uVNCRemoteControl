@@ -6,6 +6,7 @@
 ;*  Updated 12/29/2020    *
 ;**************************
 
+;TODO - Right click on a connected PC will allow you to close the uVNC viewr associated with it
 ;TODO - Search with 'Next' button for multiple matches or filtering the listview
 
 ;  *******************
@@ -528,15 +529,16 @@ Procedure CheckRunningProcesses()
          RunProgram("paexec","\\"+MyVNCList()\VNCHostName+" C:\RCTemp\winvnc -uninstall","",#PB_Program_Hide|#PB_Program_Wait)
           RunProgram("taskkill","/s \\"+MyVNCList()\VNCHostName+" /f /im winvnc.exe","",#PB_Program_Hide|#PB_Program_Wait)
            WriteLog(myhostname,"Removing uVNC files on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-            FileOp("\\"+MyVNCList()\VNCHostName+"\C$\RCTemp","",#FO_DELETE)
-             DeleteFile("view\"+MyVNCList()\VNCHostName+".vnc", #PB_FileSystem_Force)
-              DeleteFile("view\options.vnc", #PB_FileSystem_Force)
-               SetGadgetItemImage(#Hosts_List,MyVNCList()\VNCSelection,CatchImage(#PC_Image,?PC16))
-                SetGadgetItemData(#Hosts_List,MyVNCList()\VNCSelection,0)
-                 StatusBarText(#StatusBar0,0,"Ready",#PB_StatusBar_Center) 
-                  DeleteElement(MyVNCList())
-                   WriteLog(myhostname,"All operations completed successfully - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-                    WriteLog(myhostname,"");For spacing
+            WriteLog(myhostname,"Removing the uVNC configuration files on localhost - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+             FileOp("\\"+MyVNCList()\VNCHostName+"\C$\RCTemp","",#FO_DELETE)
+              DeleteFile("view\"+MyVNCList()\VNCHostName+".vnc", #PB_FileSystem_Force)
+               DeleteFile("view\options.vnc", #PB_FileSystem_Force)
+                SetGadgetItemImage(#Hosts_List,MyVNCList()\VNCSelection,CatchImage(#PC_Image,?PC16))
+                 SetGadgetItemData(#Hosts_List,MyVNCList()\VNCSelection,0)
+                  StatusBarText(#StatusBar0,0,"Ready",#PB_StatusBar_Center) 
+                   DeleteElement(MyVNCList())
+                    WriteLog(myhostname,"All operations completed successfully - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+                     WriteLog(myhostname,"");For spacing
       If FindPartWin("- service mode")=#False
        If GetGadgetState(#App_EnableScrollLock)=1
         If GetKeyState_(#VK_SCROLL)=1
@@ -1517,7 +1519,7 @@ carryon:
     EndIf
 ;*****************************************************
       connectsuccess=1
-    If SearchListIcon(#Hosts_List,GetGadgetText(#String_HostName),@Pos)=#False; Find if duplicate
+    If SearchListIcon(#Hosts_List,GetGadgetText(#String_HostName),@Pos,0)=#False; Find if duplicate
       AddGadgetItem(#Hosts_List,0,GetGadgetText(#String_HostName)+Chr(10)+GetGadgetText(#String_Description))
        SetGadgetItemImage(#Hosts_List,0,CatchImage(#PC_Checked,?PCChecked16))
         SetColumnWidths()
@@ -1525,6 +1527,14 @@ carryon:
         WriteStringN(0,GetGadgetText(#String_HostName)+Chr(44)+GetGadgetText(#String_Description))
        CloseFile(0)
     EndIf
+ If connectsuccess=1
+  If GetGadgetText(#String_HostName) And GetGadgetText(#String_Description)<>""
+    OpenPreferences("vnc.prefs")
+     WritePreferenceString("LastConnect", GetGadgetText(#String_HostName)+","+GetGadgetText(#String_Description))
+      ClosePreferences()
+       connectsuccess=0
+  EndIf
+ EndIf
    Else
      connectsuccess=0
       WriteLog(myhostname,"Could not capture the uVNC Viewer process, exiting - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
@@ -1536,16 +1546,7 @@ While WindowEvent():Wend;Refresh status bar
 
 osfailure:
 
- If connectsuccess=1
-  If GetGadgetText(#String_HostName) And GetGadgetText(#String_Description)<>""
-    OpenPreferences("vnc.prefs")
-     WritePreferenceString("LastConnect", GetGadgetText(#String_HostName)+","+GetGadgetText(#String_Description))
-      ClosePreferences()
-       connectsuccess=0
-  EndIf
- EndIf
-   WriteLog(myhostname,"Removing the uVNC configuration files on localhost - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-      StatusBarText(#StatusBar0,0,"Ready",#PB_StatusBar_Center)
+  StatusBarText(#StatusBar0,0,"Ready",#PB_StatusBar_Center)
    DisableGadget(#Panel_1,0):DisableGadget(#Text_HostName,0):DisableGadget(#Text_Description,0):DisableGadget(#Text_Search,0):DisableGadget(#String_Hostname,0):DisableGadget(#String_Description,0):DisableGadget(#String_Search,0)
   Else
     MessageRequester("Error","Cannot connect to "+myhostname+"."+#CRLF$+"Make sure the computer is turned on and connected to the network.",#MB_ICONERROR)
@@ -2005,13 +2006,14 @@ EndIf
 ;  * Main program loop *
 ;{ *********************
 
-;Add items to Hosts List
+;{ Add items to Hosts List
 FillListIcon(#Hosts_List,"hosts.dat")
 SetGadgetIcons()
 SetColumnWidths()
 If FileSize("adfind.exe")=-1
   HideGadget(#App_ImportFromAD,1)
 EndIf
+;}
 
 Repeat
 
@@ -2625,7 +2627,7 @@ EndIf
          Select eventgadget
 
            Case #Hosts_List
-             If GetGadgetText(#Hosts_List)<>""
+              If GetGadgetText(#Hosts_List)<>""
                totalItemsSelected = SendMessage_(GadgetID(#Hosts_List), #LVM_GETSELECTEDCOUNT, 0, 0)
                If totalItemsSelected=1
                  DisableMenuItem(#Menu_PopUp,#PopUp_EditDescription,0)
@@ -2788,7 +2790,7 @@ EndDataSection
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
 ; CursorPosition = 8
-; Folding = AAAAAAAAAAAA+
+; Folding = AAAAAAAAAAAA9
 ; EnableThread
 ; EnableXP
 ; UseIcon = includes\Icon.ico
