@@ -6,7 +6,7 @@
 ;*  Updated 12/29/2020    *
 ;**************************
 
-;TODO - Right click on a connected PC will allow you to close the uVNC viewr associated with it
+;TODO - Right click on a connected PC will allow you to close the uVNC viewer associated with it
 ;TODO - Search with 'Next' button for multiple matches or filtering the listview
 
 ;  *******************
@@ -153,6 +153,7 @@ EndEnumeration
 ;  * Procedures *
 ;{ **************
 Declare.l FileOp(FromLoc.s, ToLoc.s, Flag)
+Declare RemoveService(hostname.s)
 Declare WriteLog(filename.s, error.s)
 ;     ===================
 ;     | Windows/Gadgets |
@@ -505,10 +506,11 @@ Procedure.s GetPidProcessEx(Name.s)
 EndProcedure
 
 Procedure SetGadgetIcons()
-Protected position
+
+  Protected position
 
 For position = 0 To CountGadgetItems(#Hosts_List)
-  SetGadgetItemImage(#Hosts_List,position,CatchImage(#PC_Image,?PC16))
+  SetGadgetItemImage(#Hosts_List,position,CatchImage(#PC_Image,?PCBlank))
 Next
 
 EndProcedure
@@ -519,7 +521,7 @@ Procedure CheckRunningProcesses()
   While NextElement(MyVNCList())
     myproc.s=GetPidProcessEx("vncviewer.exe")
    If match(myproc,Str(MyVNCList()\VNCPID),0,#False) = #True
-     SetGadgetItemImage(#Hosts_List,MyVNCList()\VNCSelection,CatchImage(#PC_Checked,?PCChecked16))
+     SetGadgetItemImage(#Hosts_List,MyVNCList()\VNCSelection,CatchImage(#PC_Checked,?PCConnected))
       SetGadgetItemData(#Hosts_List,MyVNCList()\VNCSelection,1)
    Else
      WriteLog(myhostname,"uVNC viewer closed on localhost - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
@@ -533,7 +535,7 @@ Procedure CheckRunningProcesses()
              FileOp("\\"+MyVNCList()\VNCHostName+"\C$\RCTemp","",#FO_DELETE)
               DeleteFile("view\"+MyVNCList()\VNCHostName+".vnc", #PB_FileSystem_Force)
                DeleteFile("view\options.vnc", #PB_FileSystem_Force)
-                SetGadgetItemImage(#Hosts_List,MyVNCList()\VNCSelection,CatchImage(#PC_Image,?PC16))
+                SetGadgetItemImage(#Hosts_List,MyVNCList()\VNCSelection,CatchImage(#PC_Image,?PCBlank))
                  SetGadgetItemData(#Hosts_List,MyVNCList()\VNCSelection,0)
                   StatusBarText(#StatusBar0,0,"Ready",#PB_StatusBar_Center) 
                    DeleteElement(MyVNCList())
@@ -1387,6 +1389,14 @@ EndProcedure
 ;     ==================
 ;     | VNC Connection |
 ;{    ==================
+Procedure RemoveService(hostname.s)
+RunProgram("paexec","\\"+hostname+" C:\RCTemp\winvnc -uninstall","",#PB_Program_Hide|#PB_Program_Wait)
+ RunProgram("taskkill","/s \\"+hostname+" /f /im winvnc.exe","",#PB_Program_Hide|#PB_Program_Wait)
+  FileOp("\\"+hostname+"\C$\RCTemp","",#FO_DELETE)
+   DeleteFile("view\"+myhostname+".vnc", #PB_FileSystem_Force)
+    DeleteFile("view\options.vnc", #PB_FileSystem_Force)
+EndProcedure
+
 Procedure CreateConnection(hostname.s)
 Protected checkvnc, connectsuccess, isrunning.s, myip.s, myos.s, pingresult, success
 
@@ -1423,7 +1433,8 @@ result=InitNetwork()
    Else
      StatusBarText(#StatusBar0,0,"Found uVNC running on "+myhostname+", stopping and removing",#PB_StatusBar_Center)
       WriteLog(myhostname,"uVNC found running, removing uVNC on remote computer "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-       RunProgram("paexec","\\"+myhostname+" C:\RCTemp\winvnc -uninstall","",#PB_Program_Hide|#PB_Program_Wait)
+       RemoveService(myhostname)
+       ;RunProgram("paexec","\\"+myhostname+" C:\RCTemp\winvnc -uninstall","",#PB_Program_Hide|#PB_Program_Wait)
    EndIf
   EndIf
 
@@ -1486,7 +1497,8 @@ result=InitNetwork()
          success=0
         connectsuccess=0
        checkvnc=0
-      Goto theend
+      RemoveService(myhostname)
+     Goto theend
     EndIf
      Goto checkservice
   Else
@@ -1521,7 +1533,7 @@ carryon:
       connectsuccess=1
     If SearchListIcon(#Hosts_List,GetGadgetText(#String_HostName),@Pos,0)=#False; Find if duplicate
       AddGadgetItem(#Hosts_List,0,GetGadgetText(#String_HostName)+Chr(10)+GetGadgetText(#String_Description))
-       SetGadgetItemImage(#Hosts_List,0,CatchImage(#PC_Checked,?PCChecked16))
+       SetGadgetItemImage(#Hosts_List,0,CatchImage(#PC_Checked,?PCConnected))
         SetColumnWidths()
        OpenFile(0,"hosts.dat",#PB_File_Append)
         WriteStringN(0,GetGadgetText(#String_HostName)+Chr(44)+GetGadgetText(#String_Description))
@@ -2595,10 +2607,13 @@ EndIf
          Select eventgadget
              
            Case #Hosts_List
+             selection=GetGadgetState(#Hosts_List)
               If GetGadgetText(#Hosts_List)<>""
-               SetGadgetText(#String_HostName, GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),0))
-                SetGadgetText(#String_Description,GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),1))
-                 SetGadgetText(#String_Search,"")
+               If GetGadgetItemData(#Hosts_List,selection)=0
+                 SetGadgetText(#String_HostName, GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),0))
+                  SetGadgetText(#String_Description,GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),1))
+                   SetGadgetText(#String_Search,"")
+               EndIf
               Else
                SetGadgetText(#String_HostName, "")
                 SetGadgetText(#String_Description, "")
@@ -2780,17 +2795,17 @@ DataSection
   IncludeBinary "Includes\paexec.exe"
   remoteend:
 
-  PC16:
-  IncludeBinary ".\gfx\monitor16.ico"
+  PCBlank:
+  IncludeBinary ".\gfx\blank.ico"
 
-  PCChecked16:
+  PCConnected:
   IncludeBinary ".\gfx\monitor16on.ico";".\gfx\monitor16onchecked.ico"
 
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 8
-; Folding = AAAAAAAAAAAA9
+; CursorPosition = 10
+; Folding = AAAAAAAAAAAA5
 ; EnableThread
 ; EnableXP
 ; UseIcon = includes\Icon.ico
