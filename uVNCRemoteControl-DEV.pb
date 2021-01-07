@@ -6,7 +6,6 @@
 ;*  Updated 12/29/2020    *
 ;**************************
 
-;TODO - Right click on a connected PC will allow you to close the uVNC viewer associated with it
 ;TODO - Search with 'Next' button for multiple matches or filtering the listview
 
 ;  *******************
@@ -142,6 +141,7 @@ Enumeration
 #Weblink_4
 ;Pop-Up Menu
 #Menu_PopUp
+#PopUp_Disconnect
 #PopUp_EditDescription
 #PopUp_RemoveHost
 ;Enter Shortcut
@@ -1389,6 +1389,16 @@ EndProcedure
 ;     ==================
 ;     | VNC Connection |
 ;{    ==================
+Procedure DisconnectFromPC()
+  disc=MessageRequester("Disconnect","Do you wish to disconnect from "+GetGadgetItemText(#Hosts_List,selection)+"?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION)
+  If disc=#PB_MessageRequester_Yes
+    serverselection.s=GetGadgetItemText(#Hosts_List,selection,0)
+     RunProgram("taskkill","/FI "+Chr(34)+"WINDOWTITLE eq "+serverselection+"*"+Chr(34)+" /t","",#PB_Program_Hide)
+      SetGadgetText(#String_HostName,"")
+       SetGadgetText(#String_Description,"")
+  EndIf
+EndProcedure
+
 Procedure RemoveService(hostname.s)
 RunProgram("paexec","\\"+hostname+" C:\RCTemp\winvnc -uninstall","",#PB_Program_Hide|#PB_Program_Wait)
  RunProgram("taskkill","/s \\"+hostname+" /f /im winvnc.exe","",#PB_Program_Hide|#PB_Program_Wait)
@@ -1420,10 +1430,9 @@ EndIf
     WriteLog(myhostname,"Ping Time: "+pingresult+"ms"+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
      StatusBarText(#StatusBar0,0,"Creating uVNC files",#PB_StatusBar_Center)
        CreatePassword()
-        CreateViewerConfigFile(myhostname)
-         WriteLog(myhostname,"Successfully created all of the required local files - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-          StatusBarText(#StatusBar0,0,"Checking for uVNC on "+myhostname,#PB_StatusBar_Center)
-           WriteLog(myhostname,"Checking for running uVNC on remote computer "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+        WriteLog(myhostname,"Successfully created all of the required local files - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+         StatusBarText(#StatusBar0,0,"Checking for uVNC on "+myhostname,#PB_StatusBar_Center)
+          WriteLog(myhostname,"Checking for running uVNC on remote computer "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
 result=InitNetwork()
   If result<>0
     isopen=OpenNetworkConnection(myhostname,5900,#PB_Network_TCP,1000)
@@ -1434,10 +1443,9 @@ result=InitNetwork()
      StatusBarText(#StatusBar0,0,"Found uVNC running on "+myhostname+", stopping and removing",#PB_StatusBar_Center)
       WriteLog(myhostname,"uVNC found running, removing uVNC on remote computer "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
        RemoveService(myhostname)
-       ;RunProgram("paexec","\\"+myhostname+" C:\RCTemp\winvnc -uninstall","",#PB_Program_Hide|#PB_Program_Wait)
    EndIf
   EndIf
-
+      CreateViewerConfigFile(myhostname)
      While WindowEvent():Wend;Refresh status bar
       StatusBarText(#StatusBar0,0,"Copying files to "+myhostname,#PB_StatusBar_Center)
        myos=GetOSType(myhostname)
@@ -1533,11 +1541,10 @@ carryon:
       connectsuccess=1
     If SearchListIcon(#Hosts_List,GetGadgetText(#String_HostName),@Pos,0)=#False; Find if duplicate
       AddGadgetItem(#Hosts_List,0,GetGadgetText(#String_HostName)+Chr(10)+GetGadgetText(#String_Description))
-       SetGadgetItemImage(#Hosts_List,0,CatchImage(#PC_Checked,?PCConnected))
-        SetColumnWidths()
-       OpenFile(0,"hosts.dat",#PB_File_Append)
-        WriteStringN(0,GetGadgetText(#String_HostName)+Chr(44)+GetGadgetText(#String_Description))
-       CloseFile(0)
+       SetColumnWidths()
+        OpenFile(0,"hosts.dat",#PB_File_Append)
+         WriteStringN(0,GetGadgetText(#String_HostName)+Chr(44)+GetGadgetText(#String_Description))
+        CloseFile(0)
     EndIf
  If connectsuccess=1
   If GetGadgetText(#String_HostName) And GetGadgetText(#String_Description)<>""
@@ -1696,7 +1703,9 @@ PanelGadget(#Panel_1,0,0,453,430)
 ;{ Connections
  AddGadgetItem(#Panel_1,-1,"Connections")
  If CreatePopupMenu(#Menu_PopUp)
-   MenuItem(#PopUp_EditDescription,"Edit Description")
+   MenuItem(#PopUp_Disconnect,"Disconnect from")
+    MenuBar()
+   MenuItem(#PopUp_EditDescription,"Edit description for")
     MenuBar()
    MenuItem(#PopUp_RemoveHost, "")
  EndIf
@@ -1796,7 +1805,7 @@ AddGadgetItem(#Panel_1,-1,"About")
                                          "by" + #CRLF$ +
 	                                       "Daniel Ford" + #CRLF$ +
                                          "oldnesjunkie@gmail.com" + #CRLF$ +
-	                                       "Version 1.0L - December 29, 2020" + #CRLF$ +
+	                                       "Version 1.0M - January 4, 2021" + #CRLF$ +
                                          "Uses ADFind version 1.52.00" + #CRLF$ +
                                          "Uses PAExec Version 1.27" + #CRLF$ +
                                          "Uses UltraVNC Version 1.3.2" + #CRLF$ + #CRLF$ +
@@ -2646,9 +2655,17 @@ EndIf
                totalItemsSelected = SendMessage_(GadgetID(#Hosts_List), #LVM_GETSELECTEDCOUNT, 0, 0)
                If totalItemsSelected=1
                  DisableMenuItem(#Menu_PopUp,#PopUp_EditDescription,0)
-                  SetMenuItemText(#Menu_PopUp,#PopUp_RemoveHost,"Remove "+GetGadgetText(#Hosts_List)+" ?")
-                   SetGadgetText(#String_HostName,GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),0))
-                    SetGadgetText(#String_Description,GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),1))
+                  SetMenuItemText(#Menu_PopUp,#PopUp_Disconnect,"Disconnect from "+GetGadgetText(#Hosts_List))
+                   SetMenuItemText(#Menu_PopUp,#PopUp_EditDescription,"Edit description for "+GetGadgetText(#Hosts_List)+" ?")
+                    SetMenuItemText(#Menu_PopUp,#PopUp_RemoveHost,"Remove "+GetGadgetText(#Hosts_List)+" ?")
+                     ;SetGadgetText(#String_HostName,GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),0))
+                      ;SetGadgetText(#String_Description,GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),1))
+                selection=GetGadgetState(#Hosts_List)
+                If GetGadgetItemData(#Hosts_List,selection)=1
+                  DisableMenuItem(#Menu_PopUp, #PopUp_Disconnect,0)
+                Else
+                  DisableMenuItem(#Menu_PopUp, #PopUp_Disconnect,1)
+                EndIf
                Else
                  SetMenuItemText(#Menu_PopUp,#PopUp_RemoveHost,"Remove all selected items ?")
                   DisableMenuItem(#Menu_PopUp,#PopUp_EditDescription,1)
@@ -2675,6 +2692,9 @@ EndIf
              SetActiveGadget(#String_Description)
          EndIf
         EndIf
+
+       Case #PopUp_Disconnect
+         DisconnectFromPC()
 
        Case #PopUp_EditDescription
           myhostname=GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List))
@@ -2724,6 +2744,7 @@ EndIf
     Else
      closeapp:
      SetWindowState(#Window_0,#PB_Window_Normal)
+      DeleteDirectory("View","*.vnc",#PB_FileSystem_Force)
       If GetGadgetState(#App_RemoveFilesOnExit)=1
         DeleteDirectory("View", "", #PB_FileSystem_Recursive| #PB_FileSystem_Force)
          DeleteDirectory("Serve", "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
@@ -2804,8 +2825,8 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 10
-; Folding = AAAAAAAAAAAA5
+; CursorPosition = 9
+; Folding = AAAAAAAAAAAAw
 ; EnableThread
 ; EnableXP
 ; UseIcon = includes\Icon.ico
