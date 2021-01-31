@@ -3,7 +3,7 @@
 ;*          By            *
 ;*     OldNESJunkie       *
 ;*      07/03/2015        *
-;*  Updated 1/29/2021     *
+;*  Updated 1/30/2021     *
 ;**************************
 
 ;  *******************
@@ -58,7 +58,7 @@ Global NewList MyVNCList.VNCList()
 ;  ******************************
 ;  * Include external libraries *
 ;{ ******************************
-XIncludeFile "Includes\Listicon2.pb"
+XIncludeFile "Includes\Listicon.pb"
 XIncludeFile "Includes\COMatePLus.pbi"
 #COMATE_NOINCLUDEATL = 1
 #COMATE_NOERRORREPORTING = 1
@@ -490,7 +490,6 @@ EndProcedure
 
 Procedure SetIcons()
 Protected z
-;Set icons to blank
 For z = 0 To CountGadgetItems(#Hosts_List)-1
   SetGadgetItemImage(#Hosts_List,z,CatchImage(#PC_Blank,?PCBlank))
 Next
@@ -532,7 +531,6 @@ Procedure CheckRunningProcesses()
          SetGadgetItemImage(#Hosts_List,aa,CatchImage(#PC_Connected,?PCConnected))
        EndIf
      Next aa
-     ;SetGadgetItemImage(#Hosts_List,MyVNCList()\VNCSelection,CatchImage(#PC_Connected,?PCConnected))
    Else
      WriteLog(myhostname,"uVNC viewer closed on localhost - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
       StatusBarText(#StatusBar0,0,"Removing uVNC from "+MyVNCList()\VNCHostName,#PB_StatusBar_Center) 
@@ -768,10 +766,11 @@ ProcedureReturn Result
 EndProcedure
 
 Procedure RemoveHost()
+Protected clearcurrenthost,i
 If totalItemsSelected=1
  clearcurrenthost=MessageRequester("","Are you sure you wish to remove "+GetGadgetText(#Hosts_List)+" ?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
    If clearcurrenthost=#PB_MessageRequester_Yes
-     SelectElement(nslist(),GetGadgetState(#Hosts_List))
+     SelectElement(nslist(),Val(GetGadgetItemText(#Hosts_List,selection,2)))
       DeleteElement(nslist())
        RemoveGadgetItem(#Hosts_List,GetGadgetState(#Hosts_List))
         SetGadgetText(#String_HostName,"")
@@ -782,9 +781,9 @@ If totalItemsSelected=1
 Else
  clearcurrenthost=MessageRequester("","Are you sure you wish to remove all selected items ?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
    If clearcurrenthost=#PB_MessageRequester_Yes
-     For i=0 To totalItemsSelected - 1
-      SelectElement(nslist(),GetGadgetState(#Hosts_List))
-       DeleteElement(nslist())
+     For i=0 To totalItemsSelected-1
+      SelectElement(nslist(),GetGadgetState(#Hosts_List));Val(GetGadgetItemText(#Hosts_List,GetGadgetItemState(#Hosts_List,i),2)))
+       DeleteElement(nslist(),1)
         RemoveGadgetItem(#Hosts_List,GetGadgetState(#Hosts_List))
         SetGadgetText(#String_HostName,"")
        SetGadgetText(#String_Description,"")
@@ -1150,11 +1149,12 @@ EndProcedure
 Procedure SaveFile()
 DeleteFile("hosts.dat",#PB_FileSystem_Force)
  CreateFile(0, "hosts.dat")
-  ResetList(nslist())
-   While NextElement(nslist())
-    WriteStringN(0,nslist()\myhostnamelist+","+nslist()\mydescriptionlist)
-   Wend
- CloseFile(0)
+  OpenFile(0,"hosts.dat")
+   ResetList(nslist())
+    While NextElement(nslist())
+     WriteStringN(0,nslist()\myhostnamelist+","+nslist()\mydescriptionlist)
+    Wend
+  CloseFile(0)
 EndProcedure
 
 Procedure ImportAD()
@@ -1504,7 +1504,6 @@ carryon:
       AddElement(MyVNCList())
        MyVNCList()\VNCHostName = hostname
        MyVNCList()\VNCPID = myid
-      ;SelectElement(nslist(),selection)
        MyVNCList()\VNCSelection = Val(GetGadgetItemText(#Hosts_List,selection,2))
 ;Enable Scroll Lock
     If GetGadgetState(#App_EnableScrollLock)=1
@@ -1515,13 +1514,6 @@ carryon:
     EndIf
 ;*****************************************************
       connectsuccess=1
-    If SearchListIcon(#Hosts_List,GetGadgetText(#String_HostName),@Pos,0)=#False; Find if duplicate
-      AddGadgetItem(#Hosts_List,0,GetGadgetText(#String_HostName)+Chr(10)+GetGadgetText(#String_Description))
-       SetColumnWidths()
-        OpenFile(0,"hosts.dat",#PB_File_Append)
-         WriteStringN(0,GetGadgetText(#String_HostName)+Chr(44)+GetGadgetText(#String_Description))
-        CloseFile(0)
-    EndIf
  If connectsuccess=1
   If GetGadgetText(#String_HostName) And GetGadgetText(#String_Description)<>""
     OpenPreferences("vnc.prefs")
@@ -1554,6 +1546,19 @@ EndProcedure
 
 Procedure ConnectHostButton()
  myhostname=GetGadgetText(#String_HostName)
+  mydescription=GetGadgetText(#String_Description)
+   If match(myhostname,nslist()\myhostnamelist,1,#False)=#False
+    AddElement(nslist())
+     nslist()\myhostnamelist = myhostname
+     nslist()\mydescriptionlist = mydescription
+     nslist()\myindexlist=ListSize(nslist())
+      SortStructuredList(nslist(),#PB_Sort_Ascending,OffsetOf(nslist\myhostnamelist),TypeOf(nslist\myhostnamelist))
+       AddGadgetItem(#Hosts_List,0,myhostname+Chr(10)+mydescription+Chr(10)+nslist()\myindexlist)
+        SetColumnWidths()
+         OpenFile(0,"hosts.dat",#PB_File_Append)
+          WriteStringN(0,GetGadgetText(#String_HostName)+Chr(44)+GetGadgetText(#String_Description))
+         CloseFile(0)
+   EndIf
   CreateConnection(myhostname)
 EndProcedure
 
@@ -1674,7 +1679,7 @@ EndIf
 ;{ **************************************
 OpenWindow(#Window_0,lastx,lasty,450,450,"uVNC Remote Control",#PB_Window_SystemMenu|#PB_Window_MinimizeGadget)
  SetWindowCallback(@ColumnClickCallback(), #Window_0)
-  AddWindowTimer(#Window_0,9999,1)
+  AddWindowTimer(#Window_0,9999,250)
 PanelGadget(#Panel_1,0,0,453,430)
 ;{ Connections
  AddGadgetItem(#Panel_1,-1,"Connections")
@@ -1782,7 +1787,7 @@ AddGadgetItem(#Panel_1,-1,"About")
                                          "by" + #CRLF$ +
 	                                       "Daniel Ford" + #CRLF$ +
                                          "oldnesjunkie@gmail.com" + #CRLF$ +
-	                                       "Version 1.0N - January 29, 2021" + #CRLF$ +
+	                                       "Version 1.0.1 - January 30, 2021" + #CRLF$ +
                                          "Uses ADFind version 1.52.00" + #CRLF$ +
                                          "Uses PAExec Version 1.27" + #CRLF$ +
                                          "Uses UltraVNC Version 1.3.2" + #CRLF$ + #CRLF$ +
@@ -2798,7 +2803,7 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 5
+; CursorPosition = 7
 ; Folding = AAAAAAAAAAAAA-
 ; EnableThread
 ; EnableXP
