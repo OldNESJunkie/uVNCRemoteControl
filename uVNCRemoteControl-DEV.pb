@@ -2085,22 +2085,14 @@ EndIf
              RefreshList()
 
        Case #Connect_Button
-         SetGadgetText(#String_Search,"")
-          selection=GetGadgetState(#Hosts_List)
-           ConnectHostButton()
+         selection=GetGadgetState(#Hosts_List)
+          ConnectHostButton()
 
        Case #String_Search
          If EventType()=#PB_EventType_Change
            searchactive=1
             find.s = GetGadgetText(#String_Search)
              SearchMe(find)
-            ; SearchListIcon(#Hosts_List,find,@Pos)
-;              SetGadgetText(#String_HostName,GetGadgetText(#Hosts_List))
-;               If GetGadgetState(#Hosts_List)=-1
-;                 SetGadgetText(#String_Description,"")
-;               Else
-;                 SetGadgetText(#String_Description,GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),1))
-;               EndIf
          EndIf
 ;}
 
