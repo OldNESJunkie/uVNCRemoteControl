@@ -324,7 +324,7 @@ EndProcedure
 
 Procedure EditMyDescription(Title$)
   Protected Window, Editme, OK, Cancel
-
+selection=GetGadgetState(#Hosts_List)
 GetWindowRect_(WindowID(#Window_0),win.RECT); Store its dimensions in "win" structure.
  x=win\left : y=win\top : w=win\right-win\left ; Get it's X/Y position and width.
   Window = OpenWindow(#PB_Any,x+50,y+150,300,85,Title$,#PB_Window_ScreenCentered)
