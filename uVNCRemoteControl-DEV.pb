@@ -43,7 +43,7 @@ Global flip20, flip21, flip22, flip23, flip24, flip25, flip26, flip27, flip28
 Global flip29, flip30, flip31, flip32, flip33
 Global lastx, lasty, logme
 Global myhostname.s, pcname.s, mydescription.s
-Global totalItemsSelected
+Global totalItemsSelected, searchactive
 Global is.LVHITTESTINFO
 Global Ping_Port = IcmpCreateFile_()
 Global myname.s=GetEnvironmentVariable("username")
@@ -514,6 +514,7 @@ If ListSize(nslist())>0
        AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist)
      ElseIf GetGadgetText(#String_Search)=""
        AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist)
+        searchactive=0
      EndIf
     Wend
 EndIf
@@ -766,7 +767,7 @@ ProcedureReturn Result
 EndProcedure
 
 Procedure RemoveHost()
-Protected clearcurrenthost,i
+Protected clearcurrenthost,i, myindex.s, ni
 If totalItemsSelected=1
  clearcurrenthost=MessageRequester("","Are you sure you wish to remove "+GetGadgetText(#Hosts_List)+" ?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
    If clearcurrenthost=#PB_MessageRequester_Yes
@@ -781,16 +782,30 @@ If totalItemsSelected=1
 Else
  clearcurrenthost=MessageRequester("","Are you sure you wish to remove all selected items ?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
    If clearcurrenthost=#PB_MessageRequester_Yes
+    If searchactive=1
+     NbItems = CountGadgetItems(#Hosts_List):Debug NbItems
+      For ni = NbItems - 1 To 0 Step -1
+       Result = GetGadgetItemState(#Hosts_List, ni)
+        If Result & #PB_ListIcon_Selected
+          myindex=GetGadgetItemText(#Hosts_List,ni,2)
+           SelectElement(nslist(),Val(myindex))
+            DeleteElement(nslist())
+             RemoveGadgetItem(#Hosts_List, ni)
+        EndIf
+      Next
+     SaveFile()
+    Else
      For i=0 To totalItemsSelected-1
-      SelectElement(nslist(),GetGadgetState(#Hosts_List));Val(GetGadgetItemText(#Hosts_List,GetGadgetItemState(#Hosts_List,i),2)))
-       DeleteElement(nslist(),1)
+      SelectElement(nslist(),GetGadgetState(#Hosts_List))
+       DeleteElement(nslist())
         RemoveGadgetItem(#Hosts_List,GetGadgetState(#Hosts_List))
         SetGadgetText(#String_HostName,"")
        SetGadgetText(#String_Description,"")
       SetGadgetText(#String_Search,"")
      Next
-    SaveFile()
-   EndIf
+      SaveFile()
+    EndIf
+  EndIf
 EndIf
 EndProcedure
 
@@ -2076,8 +2091,9 @@ EndIf
 
        Case #String_Search
          If EventType()=#PB_EventType_Change
-           find.s = GetGadgetText(#String_Search)
-            SearchMe(find)
+           searchactive=1
+            find.s = GetGadgetText(#String_Search)
+             SearchMe(find)
             ; SearchListIcon(#Hosts_List,find,@Pos)
 ;              SetGadgetText(#String_HostName,GetGadgetText(#Hosts_List))
 ;               If GetGadgetState(#Hosts_List)=-1
