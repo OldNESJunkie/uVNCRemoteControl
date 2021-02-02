@@ -1,6 +1,7 @@
 ﻿Structure nslist
-   myhostname.s
-   mydescription.s
+   myhostnamelist.s
+   mydescriptionlist.s
+   myindexlist.i
 EndStructure
 
 Define Pos.Point ;-<--Search List Icon Function
@@ -564,6 +565,7 @@ Procedure ColumnClickCallback(hWnd, uMsg, wParam, lParam)
 EndProcedure
 
 Procedure CountListiconColumn(gadget, maxcolumn, keyword.s)
+Protected i
 If IsGadget(gadget)
   AddGadgetColumn(gadget, maxcolumn, keyword, 0)
     For i=0 To maxcolumn
@@ -577,6 +579,7 @@ EndIf
 EndProcedure
 
 Procedure FillListIcon(gadget, filename.s)
+Protected a$, p
    If ReadFile(0,filename)
     SendMessage_(GadgetID(gadget),#WM_SETREDRAW, #False, 0)
      With nslist()
@@ -585,15 +588,16 @@ Procedure FillListIcon(gadget, filename.s)
          p=FindString(a$,",")
         If a$<>","
          AddElement(nslist())
-          \myhostname=Left(a$,p-1)
-          \mydescription=Right(a$,(Len(a$)-(p)))
+          \myhostnamelist=Left(a$,p-1)
+          \mydescriptionlist=Right(a$,(Len(a$)-(p)))
+          \myindexlist=ListIndex(nslist())
         EndIf
        Wend
      EndWith
    ForEach nslist()
-     AddGadgetItem(gadget,-1,nslist()\myhostname+Chr(10)+nslist()\mydescription);<--Added extra Chr(10) at front
+     AddGadgetItem(gadget,-1,nslist()\myhostnamelist+Chr(10)+nslist()\mydescriptionlist+Chr(10)+nslist()\myindexlist)
    Next
-    ClearList(nslist())
+    ;ClearList(nslist())
      CloseFile(0)
       SendMessage_(GadgetID(gadget),#WM_SETREDRAW, #True, 0)
    EndIf
@@ -697,8 +701,7 @@ SetGadgetState(Gadget,y)
 
 EndProcedure
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 596
-; FirstLine = 33
+; CursorPosition = 5
 ; Folding = AAAw
 ; EnableXP
 ; Executable = ..\..\uVNCRemoteControl.exe
