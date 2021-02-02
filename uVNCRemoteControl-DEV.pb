@@ -3,7 +3,7 @@
 ;*          By            *
 ;*     OldNESJunkie       *
 ;*      07/03/2015        *
-;*  Updated 1/30/2021     *
+;*  Updated 2/2/2021     *
 ;**************************
 
 ;  *******************
@@ -1802,7 +1802,7 @@ AddGadgetItem(#Panel_1,-1,"About")
                                          "by" + #CRLF$ +
 	                                       "Daniel Ford" + #CRLF$ +
                                          "oldnesjunkie@gmail.com" + #CRLF$ +
-	                                       "Version 1.0.1 - January 30, 2021" + #CRLF$ +
+	                                       "Version 1.0.2 - January 30, 2021" + #CRLF$ +
                                          "Uses ADFind version 1.52.00" + #CRLF$ +
                                          "Uses PAExec Version 1.27" + #CRLF$ +
                                          "Uses UltraVNC Version 1.3.2" + #CRLF$ + #CRLF$ +
@@ -2621,7 +2621,7 @@ EndIf
            Case #Hosts_List
              selection=GetGadgetState(#Hosts_List)
               selected.s=GetGadgetItemText(#Hosts_List,selection,0)
-              If FindPartWin(selected)
+              If FindPartWin(selected+" (")
                 serverselection.s=GetGadgetItemText(#Hosts_List,selection,0)
                  myhwnd=FindPartWin(serverselection)
                   ShowWindow_(myhwnd,#SW_RESTORE)
@@ -2697,7 +2697,8 @@ EndIf
 ;  *********************
 ;{ ***Mouseover Event***
    Case #WM_MOUSEMOVE
-     If IsMouseOver(GadgetID(#Hosts_List));GetForegroundWindow_()=WindowID(#Window_0) And 
+     If IsMouseOver(GadgetID(#Hosts_List))
+      If GetForegroundWindow_()=WindowID(#Window_0)
        GetCursorPos_(p.POINT)
         ScreenToClient_ (GadgetID(#Hosts_List), @p)           
          is\pt\x = p\x
@@ -2712,6 +2713,7 @@ EndIf
       Else
         SetGadgetItemColor(#Hosts_List,olditem,#PB_Gadget_BackColor,-1)
          SetGadgetItemColor(#Hosts_List,is\iItem,#PB_Gadget_BackColor,-1)
+      EndIf
       EndIf
      EndIf
 ;}
