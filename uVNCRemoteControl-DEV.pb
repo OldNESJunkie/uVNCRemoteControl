@@ -6,6 +6,8 @@
 ;*  Updated 2/2/2021     *
 ;**************************
 
+;FIXME - Removing a newly added host after initial connection causes a no current list item crash
+
 ;  *******************
 ;  * Embed Help Text *
 ;{ *******************
@@ -1163,7 +1165,7 @@ EndProcedure
 
 Procedure SaveFile()
 DeleteFile("hosts.dat",#PB_FileSystem_Force)
- CreateFile(0, "hosts.dat")
+ CreateFile(0,"hosts.dat")
   OpenFile(0,"hosts.dat")
    ResetList(nslist())
     While NextElement(nslist())
@@ -1528,7 +1530,7 @@ carryon:
      EndIf
     EndIf
 ;*****************************************************
-      connectsuccess=1
+connectsuccess=1
  If connectsuccess=1
   If GetGadgetText(#String_HostName) And GetGadgetText(#String_Description)<>""
     OpenPreferences("vnc.prefs")
@@ -1562,25 +1564,33 @@ EndProcedure
 Procedure ConnectHostButton()
  myhostname=GetGadgetText(#String_HostName)
   mydescription=GetGadgetText(#String_Description)
-   If match(myhostname,nslist()\myhostnamelist,1,#False)=#False
+   If SearchListIcon(#Hosts_List,myhostname,@Pos,0)=#True
+     mypos=GetGadgetState(#Hosts_List)
+      SetGadgetText(#String_Description,GetGadgetItemText(#Hosts_List,mypos,1))
+       SelectElement(nslist(),mypos)
+        selection=nslist()\myindexlist
+         CreateConnection(myhostname)
+   Else
     AddElement(nslist())
      nslist()\myhostnamelist = myhostname
      nslist()\mydescriptionlist = mydescription
      nslist()\myindexlist=ListSize(nslist())
       SortStructuredList(nslist(),#PB_Sort_Ascending,OffsetOf(nslist\myhostnamelist),TypeOf(nslist\myhostnamelist))
        AddGadgetItem(#Hosts_List,0,myhostname+Chr(10)+mydescription+Chr(10)+nslist()\myindexlist)
-        SetColumnWidths()
-         SaveFile()
+        selection=0
+         SetColumnWidths()
+          SaveFile()
+           SetGadgetState(#Hosts_List,0)
+            CreateConnection(myhostname)
    EndIf
-  CreateConnection(myhostname)
 EndProcedure
 
 Procedure ConnectHostMouse()
  If GetGadgetText(#Hosts_List)<>""
    myhostname=GetGadgetText(#Hosts_List)
      SetGadgetText(#String_HostName, myhostname)
-     SetGadgetText(#String_Description,GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),1))
-   CreateConnection(myhostname)
+      SetGadgetText(#String_Description,GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),1))
+       CreateConnection(myhostname)
  EndIf 
 EndProcedure
 ;}
@@ -2673,7 +2683,6 @@ EndIf
          If GetGadgetState(#Panel_1)=0
           If GetGadgetText(#String_HostName)<>""
             ConnectHostButton()
-             SetActiveGadget(#String_Description)
          EndIf
         EndIf
 
