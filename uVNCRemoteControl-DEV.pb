@@ -3,10 +3,8 @@
 ;*          By            *
 ;*     OldNESJunkie       *
 ;*      07/03/2015        *
-;*  Updated 2/2/2021     *
+;*  Updated 2/3/2021     *
 ;**************************
-
-;FIXME - Removing a newly added host after initial connection causes a no current list item crash
 
 ;  *******************
 ;  * Embed Help Text *
@@ -1575,13 +1573,20 @@ Procedure ConnectHostButton()
      nslist()\myhostnamelist = myhostname
      nslist()\mydescriptionlist = mydescription
      nslist()\myindexlist=ListSize(nslist())
-      SortStructuredList(nslist(),#PB_Sort_Ascending,OffsetOf(nslist\myhostnamelist),TypeOf(nslist\myhostnamelist))
-       AddGadgetItem(#Hosts_List,0,myhostname+Chr(10)+mydescription+Chr(10)+nslist()\myindexlist)
-        selection=0
-         SetColumnWidths()
-          SaveFile()
-           SetGadgetState(#Hosts_List,0)
-            CreateConnection(myhostname)
+      *old_element = @nslist()
+       SortStructuredList(nslist(),#PB_Sort_Ascending,OffsetOf(nslist\myhostnamelist),TypeOf(nslist\myhostnamelist))
+        ResetList(nslist())
+         RefreshList()
+          ChangeCurrentElement(nslist(),*old_element)
+           searchlisticon(#Hosts_List,myhostname,@Pos,0)
+            mypos=GetGadgetState(#Hosts_List)
+             nslist()\myindexlist=mypos
+            AddGadgetItem(#Hosts_List,0,nslist()\myhostnamelist+Chr(10)+nslist()\mydescriptionlist+Chr(10)+nslist()\myindexlist)
+           selection=0
+          SetColumnWidths()
+         SaveFile()
+        SetGadgetState(#Hosts_List,0)
+       CreateConnection(myhostname)
    EndIf
 EndProcedure
 
@@ -1717,7 +1722,7 @@ PanelGadget(#Panel_1,0,0,453,430)
   ListIconGadget(#Hosts_List,10,10,425,300,"Host Name",150,#PB_ListIcon_AlwaysShowSelection|#PB_ListIcon_FullRowSelect|#PB_ListIcon_MultiSelect)
    AddGadgetColumn(#Hosts_List,1,"Description",226)
     SetGadgetItemAttribute(#Hosts_List,1,#PB_ListIcon_ColumnWidth,130)
-   AddGadgetColumn(#Hosts_List,2,"Index",100)
+   AddGadgetColumn(#Hosts_List,2,"Index",0)
   HyperLinkGadget(#Text_HostName,10,317,65,20,"Host Name:",#Blue)
    BalloonTip(#Window_0,#Text_HostName,"Click to clear the host name field","",#MB_ICONINFORMATION)
    StringGadget(#String_HostName,80,315,250,20,"")
@@ -2680,9 +2685,17 @@ EndIf
      Select EventMenu()
 
        Case #Menu_EnterKey; Enter Key Shortcut
+         selection=GetGadgetState(#Hosts_List)
+          selected.s=GetGadgetItemText(#Hosts_List,selection,0)
          If GetGadgetState(#Panel_1)=0
           If GetGadgetText(#String_HostName)<>""
+           If FindPartWin(selected+" (")
+             serverselection.s=GetGadgetItemText(#Hosts_List,selection,0)
+              myhwnd=FindPartWin(serverselection)
+               ShowWindow_(myhwnd,#SW_RESTORE)
+           Else
             ConnectHostButton()
+           EndIf
          EndIf
         EndIf
 
@@ -2820,8 +2833,8 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 7
-; Folding = AAAAAAAAAEAAA-
+; CursorPosition = 5
+; Folding = AAAAAAAAAAAAA-
 ; EnableThread
 ; EnableXP
 ; UseIcon = gfx\Icon.ico
