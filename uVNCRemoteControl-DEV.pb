@@ -2718,13 +2718,12 @@ EndIf
 ;{ ***Mouseover Event***
    Case #WM_MOUSEMOVE
      If IsMouseOver(GadgetID(#Hosts_List))
-      If GetForegroundWindow_()=WindowID(#Window_0)
        GetCursorPos_(p.POINT)
         ScreenToClient_ (GadgetID(#Hosts_List), @p)           
          is\pt\x = p\x
-         is\pt\y = p\y
-          index = SendMessage_(GadgetID(#Hosts_List),#LVM_GETHOTITEM ,0,0)
-        SendMessage_(GadgetID(#Hosts_List),#LVM_SUBITEMHITTEST ,0,@is)
+          is\pt\y = p\y
+           index = SendMessage_(GadgetID(#Hosts_List),#LVM_GETHOTITEM ,0,0)
+            SendMessage_(GadgetID(#Hosts_List),#LVM_SUBITEMHITTEST ,0,@is)
       If is\iItem >= 0 And index >= 0
         SetActiveGadget(#Hosts_List)
          SetGadgetItemColor(#Hosts_List,olditem,#PB_Gadget_BackColor,-1)
@@ -2733,7 +2732,6 @@ EndIf
       Else
         SetGadgetItemColor(#Hosts_List,olditem,#PB_Gadget_BackColor,-1)
          SetGadgetItemColor(#Hosts_List,is\iItem,#PB_Gadget_BackColor,-1)
-      EndIf
       EndIf
      EndIf
 ;}
@@ -2833,8 +2831,9 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 7
-; Folding = AAAAAAAAAAAAA-
+; CursorPosition = 2734
+; FirstLine = 73
+; Folding = AAAAAAAAAAEBI-
 ; EnableThread
 ; EnableXP
 ; UseIcon = gfx\Icon.ico
