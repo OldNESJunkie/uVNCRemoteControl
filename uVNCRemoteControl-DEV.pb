@@ -3,8 +3,11 @@
 ;*          By            *
 ;*     OldNESJunkie       *
 ;*      07/03/2015        *
-;*  Updated 2/3/2021     *
+;*  Updated 2/5/2021     *
 ;**************************
+
+;TODO - Check the double-click to re-activate a uVNC viewer, seems to disconnect sometimes
+;TODO - Try using the Match function for searching instead of findstring for backwards searching
 
 ;  *******************
 ;  * Embed Help Text *
@@ -347,7 +350,7 @@ GetWindowRect_(WindowID(#Window_0),win.RECT); Store its dimensions in "win" stru
         If EventGadget() = OK
          If GetGadgetText(Editme)<>""
           SetGadgetText(#Hosts_List,myhostname+Chr(10)+GetGadgetText(EditMe))
-           SelectElement(nslist(),Val(GetGadgetItemText(#Hosts_List,selection,2)));GetGadgetState(#Hosts_List))
+           SelectElement(nslist(),Val(GetGadgetItemText(#Hosts_List,selection,2)))
             nslist()\mydescriptionlist=GetGadgetText(EditMe)
              SetGadgetItemText(#Hosts_List,selection,nslist()\mydescriptionlist,1)
              SaveFile()
@@ -373,21 +376,15 @@ GetWindowRect_(WindowID(#Window_0),win.RECT); Store its dimensions in "win" stru
 
       If GetKeyState_(#VK_RETURN) > 1
        If GetGadgetText(Editme)<>""
-        If CountGadgetItems(#Hosts_List)<>ListSize(nslist())
-          MessageRequester("Error", "Cannot edit filtered list",#MB_ICONERROR)
-           Break
+         SetGadgetText(#Hosts_List,myhostname+Chr(10)+GetGadgetText(EditMe))
+          SelectElement(nslist(),Val(GetGadgetItemText(#Hosts_List,selection,2)))
+           nslist()\mydescriptionlist=GetGadgetText(EditMe)
+            SetGadgetItemText(#Hosts_List,selection,nslist()\mydescriptionlist,1)
+            SaveFile()
+        If GetGadgetText(#String_Hostname)<>""
+          SetGadgetText(#String_Description,GetGadgetText(EditMe))
         EndIf
-          SetGadgetText(#Hosts_List,myhostname+Chr(10)+GetGadgetText(EditMe))
-           SelectElement(nslist(),GetGadgetState(#Hosts_List))
-            nslist()\mydescriptionlist=GetGadgetText(EditMe)
-             SaveFile()
-            If GetGadgetText(#String_HostName)<>""
-              SetGadgetText(#String_Description,GetGadgetText(EditMe))
-            EndIf
-               ClearList(nslist())
-                ClearGadgetItems(#Hosts_List)
-                 FillListIcon(#Hosts_List,"hosts.dat")
-                  Break
+          Break
        Else
          Break
        EndIf
@@ -1815,7 +1812,7 @@ AddGadgetItem(#Panel_1,-1,"About")
                                          "by" + #CRLF$ +
 	                                       "Daniel Ford" + #CRLF$ +
                                          "oldnesjunkie@gmail.com" + #CRLF$ +
-	                                       "Version 1.0.2 - January 30, 2021" + #CRLF$ +
+	                                       "Version 1.0.3 - February 5, 2021" + #CRLF$ +
                                          "Uses ADFind version 1.52.00" + #CRLF$ +
                                          "Uses PAExec Version 1.27" + #CRLF$ +
                                          "Uses UltraVNC Version 1.3.2" + #CRLF$ + #CRLF$ +
@@ -2705,6 +2702,8 @@ EndIf
        Case #PopUp_EditDescription
           myhostname=GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List))
            mydescription=GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),1)
+            SetGadgetText(#String_HostName,myhostname)
+             SetGadgetText(#String_Description,mydescription)
          EditMyDescription("Edit Description")
 
        Case #PopUp_RemoveHost; Remove Host Pop-Up Menu
@@ -2831,9 +2830,8 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 2734
-; FirstLine = 73
-; Folding = AAAAAAAAAAEBI-
+; CursorPosition = 10
+; Folding = AAAAAAAAAAAAA-
 ; EnableThread
 ; EnableXP
 ; UseIcon = gfx\Icon.ico
