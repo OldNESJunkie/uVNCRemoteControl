@@ -7,7 +7,6 @@
 ;**************************
 
 ;TODO - Check the double-click to re-activate a uVNC viewer, seems to disconnect sometimes
-;TODO - Try using the Match function for searching instead of findstring for backwards searching
 
 ;  *******************
 ;  * Embed Help Text *
@@ -147,6 +146,9 @@ Enumeration
 #PopUp_RemoveHost
 ;Enter Shortcut
 #Menu_EnterKey
+#Edit
+#Quit
+#Recycle
 EndEnumeration
 ;}
 
@@ -1708,12 +1710,12 @@ OpenWindow(#Window_0,lastx,lasty,450,450,"uVNC Remote Control",#PB_Window_System
 PanelGadget(#Panel_1,0,0,453,430)
 ;{ Connections
  AddGadgetItem(#Panel_1,-1,"Connections")
- If CreatePopupMenu(#Menu_PopUp)
-   MenuItem(#PopUp_Disconnect,"Disconnect from")
+ If CreatePopupImageMenu(#Menu_PopUp)
+   MenuItem(#PopUp_Disconnect,"Disconnect from",CatchImage(#Quit,?quit))
     MenuBar()
-   MenuItem(#PopUp_EditDescription,"Edit description for")
+   MenuItem(#PopUp_EditDescription,"Edit description for",CatchImage(#Edit,?edit))
     MenuBar()
-   MenuItem(#PopUp_RemoveHost, "")
+   MenuItem(#PopUp_RemoveHost, "",CatchImage(#Recycle,?recycle))
     DisableMenuItem(#Menu_PopUp,#PopUp_Disconnect,1)
  EndIf
   ListIconGadget(#Hosts_List,10,10,425,300,"Host Name",150,#PB_ListIcon_AlwaysShowSelection|#PB_ListIcon_FullRowSelect|#PB_ListIcon_MultiSelect)
@@ -2827,10 +2829,19 @@ DataSection
   PCBlank:
   IncludeBinary "gfx\blank.ico"
 
+  edit:
+  IncludeBinary "gfx\edit.ico"
+
+  quit:
+  IncludeBinary "gfx\quit.ico"
+
+  recycle:
+  IncludeBinary "gfx\recycle.ico"
+
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 10
+; CursorPosition = 9
 ; Folding = AAAAAAAAAAAAA-
 ; EnableThread
 ; EnableXP
