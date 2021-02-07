@@ -3,10 +3,8 @@
 ;*          By            *
 ;*     OldNESJunkie       *
 ;*      07/03/2015        *
-;*  Updated 2/5/2021     *
+;*  Updated 2/7/2021      *
 ;**************************
-
-;TODO - Check the double-click to re-activate a uVNC viewer, seems to disconnect sometimes
 
 ;  *******************
 ;  * Embed Help Text *
@@ -1571,21 +1569,21 @@ Procedure ConnectHostButton()
     AddElement(nslist())
      nslist()\myhostnamelist = myhostname
      nslist()\mydescriptionlist = mydescription
-     nslist()\myindexlist=ListSize(nslist())
+     If CountGadgetItems(#Hosts_List)=0
+       nslist()\myindexlist=0
+     Else
+       nslist()\myindexlist=ListSize(nslist())
+     EndIf
       *old_element = @nslist()
        SortStructuredList(nslist(),#PB_Sort_Ascending,OffsetOf(nslist\myhostnamelist),TypeOf(nslist\myhostnamelist))
         ResetList(nslist())
-         RefreshList()
-          ChangeCurrentElement(nslist(),*old_element)
-           searchlisticon(#Hosts_List,myhostname,@Pos,0)
-            mypos=GetGadgetState(#Hosts_List)
-             nslist()\myindexlist=mypos
-            AddGadgetItem(#Hosts_List,0,nslist()\myhostnamelist+Chr(10)+nslist()\mydescriptionlist+Chr(10)+nslist()\myindexlist)
-           selection=0
-          SetColumnWidths()
-         SaveFile()
-        SetGadgetState(#Hosts_List,0)
-       CreateConnection(myhostname)
+         ChangeCurrentElement(nslist(),*old_element)
+          AddGadgetItem(#Hosts_List,0,nslist()\myhostnamelist+Chr(10)+nslist()\mydescriptionlist+Chr(10)+nslist()\myindexlist)
+          selection=0
+         SetColumnWidths()
+        SaveFile()
+       SetGadgetState(#Hosts_List,0)
+      CreateConnection(myhostname)
    EndIf
 EndProcedure
 
@@ -1721,7 +1719,7 @@ PanelGadget(#Panel_1,0,0,453,430)
   ListIconGadget(#Hosts_List,10,10,425,300,"Host Name",150,#PB_ListIcon_AlwaysShowSelection|#PB_ListIcon_FullRowSelect|#PB_ListIcon_MultiSelect)
    AddGadgetColumn(#Hosts_List,1,"Description",226)
     SetGadgetItemAttribute(#Hosts_List,1,#PB_ListIcon_ColumnWidth,130)
-   AddGadgetColumn(#Hosts_List,2,"Index",0)
+   AddGadgetColumn(#Hosts_List,2,"Index",100)
   HyperLinkGadget(#Text_HostName,10,317,65,20,"Host Name:",#Blue)
    BalloonTip(#Window_0,#Text_HostName,"Click to clear the host name field","",#MB_ICONINFORMATION)
    StringGadget(#String_HostName,80,315,250,20,"")
@@ -2841,7 +2839,7 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 9
+; CursorPosition = 5
 ; Folding = AAAAAAAAAAAAA-
 ; EnableThread
 ; EnableXP
