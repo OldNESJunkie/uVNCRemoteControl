@@ -43,7 +43,7 @@ Global flip20, flip21, flip22, flip23, flip24, flip25, flip26, flip27, flip28
 Global flip29, flip30, flip31, flip32, flip33
 Global lastx, lasty, logme
 Global myhostname.s, pcname.s, mydescription.s
-Global totalItemsSelected, searchactive
+Global totalItemsSelected
 Global is.LVHITTESTINFO
 Global Ping_Port = IcmpCreateFile_()
 Global myname.s=GetEnvironmentVariable("username")
@@ -500,18 +500,33 @@ ClearGadgetItems(#Hosts_List)
     Wend
 EndProcedure
 
+Procedure.i FindStringRev(String$, StringToFind$, UseCase.i=#PB_String_NoCase)
+  Protected.i length = Len(StringToFind$)
+  Protected.i *pos = @String$ + (Len(String$)-length) * SizeOf(Character)
+  While @String$ <= *pos
+    If CompareMemoryString(*pos, @StringToFind$, UseCase, length) = #PB_String_Equal ; = 0
+      ProcedureReturn (*pos - @String$) / SizeOf(Character) + 1
+    EndIf
+    *pos - SizeOf(Character)
+  Wend
+  ProcedureReturn 0
+EndProcedure
+
 Procedure SearchMe(search.s)
 ClearGadgetItems(#Hosts_List)
 If ListSize(nslist())>0
   ResetList(nslist())
     While NextElement(nslist())
-     If FindString(nslist()\myhostnamelist,search,1,#PB_String_NoCase)=#True
+     If FindString(nslist()\myhostnamelist,search,1,#PB_String_NoCase)
        AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist)
-     ElseIf FindString(nslist()\mydescriptionlist,search,1,#PB_String_NoCase)=#True
+     ElseIf FindStringRev(nslist()\myhostnamelist,search,1)
+       AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist)
+     ElseIf FindString(nslist()\mydescriptionlist,search,1,#PB_String_NoCase)
+       AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist)
+     ElseIf FindStringRev(nslist()\mydescriptionlist,search,1)
        AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist)
      ElseIf GetGadgetText(#String_Search)=""
        AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist)
-        searchactive=0
      EndIf
     Wend
 EndIf
@@ -779,8 +794,7 @@ If totalItemsSelected=1
 Else
  clearcurrenthost=MessageRequester("","Are you sure you wish to remove all selected items ?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
    If clearcurrenthost=#PB_MessageRequester_Yes
-    If searchactive=1
-     NbItems = CountGadgetItems(#Hosts_List):Debug NbItems
+     NbItems = CountGadgetItems(#Hosts_List)
       For ni = NbItems - 1 To 0 Step -1
        Result = GetGadgetItemState(#Hosts_List, ni)
         If Result & #PB_ListIcon_Selected
@@ -791,17 +805,6 @@ Else
         EndIf
       Next
      SaveFile()
-    Else
-     For i=0 To totalItemsSelected-1
-      SelectElement(nslist(),GetGadgetState(#Hosts_List))
-       DeleteElement(nslist())
-        RemoveGadgetItem(#Hosts_List,GetGadgetState(#Hosts_List))
-        SetGadgetText(#String_HostName,"")
-       SetGadgetText(#String_Description,"")
-      SetGadgetText(#String_Search,"")
-     Next
-      SaveFile()
-    EndIf
   EndIf
 EndIf
 EndProcedure
@@ -2100,9 +2103,8 @@ EndIf
 
        Case #String_Search
          If EventType()=#PB_EventType_Change
-           searchactive=1
-            find.s = GetGadgetText(#String_Search)
-             SearchMe(find)
+           find.s = GetGadgetText(#String_Search)
+            SearchMe(find)
          EndIf
 ;}
 
@@ -2839,8 +2841,8 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 7
-; Folding = AAAAAAAAAAAAA-
+; CursorPosition = 9
+; Folding = AAAAAAAAAAAAA+
 ; EnableThread
 ; EnableXP
 ; UseIcon = gfx\Icon.ico
