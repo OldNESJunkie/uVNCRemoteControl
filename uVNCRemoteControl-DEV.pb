@@ -1719,7 +1719,7 @@ PanelGadget(#Panel_1,0,0,453,430)
   ListIconGadget(#Hosts_List,10,10,425,300,"Host Name",150,#PB_ListIcon_AlwaysShowSelection|#PB_ListIcon_FullRowSelect|#PB_ListIcon_MultiSelect)
    AddGadgetColumn(#Hosts_List,1,"Description",226)
     SetGadgetItemAttribute(#Hosts_List,1,#PB_ListIcon_ColumnWidth,130)
-   AddGadgetColumn(#Hosts_List,2,"Index",100)
+   AddGadgetColumn(#Hosts_List,2,"Index",0)
   HyperLinkGadget(#Text_HostName,10,317,65,20,"Host Name:",#Blue)
    BalloonTip(#Window_0,#Text_HostName,"Click to clear the host name field","",#MB_ICONINFORMATION)
    StringGadget(#String_HostName,80,315,250,20,"")
@@ -2839,7 +2839,7 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 5
+; CursorPosition = 7
 ; Folding = AAAAAAAAAAAAA-
 ; EnableThread
 ; EnableXP
