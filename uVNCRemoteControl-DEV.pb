@@ -517,11 +517,7 @@ ClearGadgetItems(#Hosts_List)
 If ListSize(nslist())>0
   ResetList(nslist())
     While NextElement(nslist())
-     If FindString(nslist()\myhostnamelist,search,1,#PB_String_NoCase)
-       AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist)
-     ElseIf FindStringRev(nslist()\myhostnamelist,search,1)
-       AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist)
-     ElseIf FindString(nslist()\mydescriptionlist,search,1,#PB_String_NoCase)
+     If FindStringRev(nslist()\myhostnamelist,search,1)
        AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist)
      ElseIf FindStringRev(nslist()\mydescriptionlist,search,1)
        AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist)
@@ -2841,8 +2837,9 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 9
-; Folding = AAAAAAAAAAAAA+
+; CursorPosition = 526
+; FirstLine = 56
+; Folding = ADAQAAAAAAAAA+
 ; EnableThread
 ; EnableXP
 ; UseIcon = gfx\Icon.ico
