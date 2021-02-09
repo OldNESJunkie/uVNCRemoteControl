@@ -17,12 +17,12 @@ Application:
 
 This is the normal behavior:
 
-  1 check if there's a valid IP address assigned to the client
-  2 ping the client
-  3 map the client C$, create the RCTemp folder and copy VNC over
-  4 start the vnc server on the remote client
-  5 start vnc viewer on localhost and connect to client
-  6 after viewer exits, stop VNC service, delete files on client
+  1 check if there's a valid IP address assigned to the client 
+  2 ping the client 
+  3 map the client C$, create the RCTemp folder and copy VNC over 
+  4 start the vnc server on the remote client 
+  5 start vnc viewer on localhost and connect to client 
+  6 after viewer exits, stop VNC service, delete files on client 
   7 unhide GUI on localhost
 
 Example setup
