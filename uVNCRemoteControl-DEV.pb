@@ -1816,8 +1816,11 @@ AddGadgetItem(#Panel_1,-1,"About")
                                          "Uses PAExec Version 1.27" + #CRLF$ +
                                          "Uses UltraVNC Version 1.3.2" + #CRLF$ + #CRLF$ +
                                          "Created with the following from the PureBasic Forums:"+#CRLF$+
+                                         "FindStringRev by skywalk"+#CRLF$+
                                          "ListIcon Sort by netmaestro"+#CRLF$+
-                                         "SearchListIcon by infratec")
+                                         "FindPartWin by PB"+#CRLF$+
+                                         "SearchListIcon by infratec"+#CRLF$+
+                                         "Anyone else I failed to mention :)")
 CloseGadgetList()
 ;}
 ;}
@@ -2095,7 +2098,14 @@ EndIf
 
        Case #Connect_Button
          selection=GetGadgetState(#Hosts_List)
-          ConnectHostButton()
+          selected.s=GetGadgetItemText(#Hosts_List,selection,0)
+           If FindPartWin(selected+" ( ")
+             serverselection.s=GetGadgetItemText(#Hosts_List,selection,0)
+              myhwnd=FindPartWin(serverselection)
+               ShowWindow_(myhwnd,#SW_RESTORE)
+           Else
+            ConnectHostButton()
+           EndIf
 
        Case #String_Search
          If EventType()=#PB_EventType_Change
@@ -2629,7 +2639,7 @@ EndIf
            Case #Hosts_List
              selection=GetGadgetState(#Hosts_List)
               selected.s=GetGadgetItemText(#Hosts_List,selection,0)
-              If FindPartWin(selected+" (")
+              If FindPartWin(selected+" ( ")
                 serverselection.s=GetGadgetItemText(#Hosts_List,selection,0)
                  myhwnd=FindPartWin(serverselection)
                   ShowWindow_(myhwnd,#SW_RESTORE)
@@ -2684,7 +2694,7 @@ EndIf
           selected.s=GetGadgetItemText(#Hosts_List,selection,0)
          If GetGadgetState(#Panel_1)=0
           If GetGadgetText(#String_HostName)<>""
-           If FindPartWin(selected+" (")
+           If FindPartWin(selected+" ( ")
              serverselection.s=GetGadgetItemText(#Hosts_List,selection,0)
               myhwnd=FindPartWin(serverselection)
                ShowWindow_(myhwnd,#SW_RESTORE)
@@ -2837,9 +2847,8 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 526
-; FirstLine = 56
-; Folding = ADAQAAAAAAAAA+
+; CursorPosition = 7
+; Folding = AAAAAAAAAAAAA+
 ; EnableThread
 ; EnableXP
 ; UseIcon = gfx\Icon.ico
