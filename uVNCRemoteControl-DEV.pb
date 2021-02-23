@@ -6,6 +6,9 @@
 ;*  Updated 2/7/2021      *
 ;**************************
 
+;FIXME - Connecting to new host, then trying to edit its description causes a crash
+;FIXME - Removing multiples is one-off at the bottom, wrong one removed
+
 ;  *******************
 ;  * Embed Help Text *
 ;{ *******************
@@ -59,9 +62,6 @@ Global NewList MyVNCList.VNCList()
 ;  * Include external libraries *
 ;{ ******************************
 XIncludeFile "Includes\Listicon.pb"
-XIncludeFile "Includes\COMatePLus.pbi"
-#COMATE_NOINCLUDEATL = 1
-#COMATE_NOERRORREPORTING = 1
 ;}
 
 ;  **************************************
@@ -336,11 +336,11 @@ GetWindowRect_(WindowID(#Window_0),win.RECT); Store its dimensions in "win" stru
      StickyWindow(Window,1)
   
  If Window
-   Editme  = StringGadget(#PB_Any,10,10,280,20,"")
+   EditMe  = StringGadget(#PB_Any,10,10,280,20,"")
     OK      = ButtonGadget(#PB_Any,40,48,80,25,"OK",#PB_Button_Default)
      Cancel  = ButtonGadget(#PB_Any,180,48,80,25,"Cancel")
       SetActiveGadget(EditMe)
-       SetGadgetText(Editme,mydescription)
+       SetGadgetText(EditMe,mydescription)
 
   Repeat
 
@@ -348,12 +348,12 @@ GetWindowRect_(WindowID(#Window_0),win.RECT); Store its dimensions in "win" stru
 
       Case #PB_Event_Gadget      
         If EventGadget() = OK
-         If GetGadgetText(Editme)<>""
+         If GetGadgetText(EditMe)<>""
           SetGadgetText(#Hosts_List,myhostname+Chr(10)+GetGadgetText(EditMe))
            SelectElement(nslist(),Val(GetGadgetItemText(#Hosts_List,selection,2)))
             nslist()\mydescriptionlist=GetGadgetText(EditMe)
              SetGadgetItemText(#Hosts_List,selection,nslist()\mydescriptionlist,1)
-             SaveFile()
+              SaveFile()
             If GetGadgetText(#String_Hostname)<>""
               SetGadgetText(#String_Description,GetGadgetText(EditMe))
             EndIf
@@ -375,12 +375,12 @@ GetWindowRect_(WindowID(#Window_0),win.RECT); Store its dimensions in "win" stru
       EndSelect
 
       If GetKeyState_(#VK_RETURN) > 1
-       If GetGadgetText(Editme)<>""
+       If GetGadgetText(EditMe)<>""
          SetGadgetText(#Hosts_List,myhostname+Chr(10)+GetGadgetText(EditMe))
           SelectElement(nslist(),Val(GetGadgetItemText(#Hosts_List,selection,2)))
            nslist()\mydescriptionlist=GetGadgetText(EditMe)
             SetGadgetItemText(#Hosts_List,selection,nslist()\mydescriptionlist,1)
-            SaveFile()
+             SaveFile()
         If GetGadgetText(#String_Hostname)<>""
           SetGadgetText(#String_Description,GetGadgetText(EditMe))
         EndIf
@@ -646,24 +646,25 @@ EndProcedure
 ;{    ===========
 ;HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\Processor_Architecture
 Procedure.s GetOSType(hostname.s)
-Protected myostype.s
-  strComputer.s = hostname
-  Define.COMateObject objWMIService, objProcess
-  colOSType.COMateEnumObject
-  objWMIService = COMate_GetObject("winmgmts:{impersonationLevel=impersonate}!\\" + strComputer + "\root\cimv2")
-  If objWMIService
-    colOSType = objWMIService\CreateEnumeration("ExecQuery('Select * from Win32_OperatingSystem')")
-   If colOSType
-     objProcess = colOSType\GetNextObject()
-      myostype.s=objProcess\GetStringProperty("OSArchitecture")
-       objProcess = colOSType\GetNextObject()
-   colOSType\Release()
+Protected myprogram, output$
+myprogram=RunProgram("paexec ","\\"+myhostname+" wmic os get osarchitecture","",#PB_Program_Open|#PB_Program_Read|#PB_Program_Hide)
+output$=""
+If myprogram
+ While ProgramRunning(myprogram)
+  If AvailableProgramOutput(myprogram)
+   output$ + ReadProgramString(myprogram) + Chr(13)
   EndIf
-   objWMIService\Release()
-  Else
-    ProcedureReturn "Access Denied"
-  EndIf
- ProcedureReturn myostype.s
+ Wend
+output$ + "Exitcode: "+Str(ProgramExitCode(myprogram))
+If FindString(output$,"32",1,#PB_String_NoCase)
+Debug "OS is 32-Bit"
+  ProcedureReturn "32"
+ElseIf FindString(output$,"64",1,#PB_String_NoCase)
+Debug "OS is 64-Bit"
+  ProcedureReturn "64"
+EndIf
+CloseProgram(myprogram)
+EndIf
 EndProcedure
 ;}
 
@@ -775,11 +776,11 @@ ProcedureReturn Result
 EndProcedure
 
 Procedure RemoveHost()
-Protected clearcurrenthost,i, myindex.s, ni
+Protected clearcurrenthost, myindex.s, NbItems, ni, Result
 If totalItemsSelected=1
  clearcurrenthost=MessageRequester("","Are you sure you wish to remove "+GetGadgetText(#Hosts_List)+" ?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
    If clearcurrenthost=#PB_MessageRequester_Yes
-     SelectElement(nslist(),Val(GetGadgetItemText(#Hosts_List,selection,2)))
+     SelectElement(nslist(),Val(GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),2)));selection,2)))
       DeleteElement(nslist())
        RemoveGadgetItem(#Hosts_List,GetGadgetState(#Hosts_List))
         SetGadgetText(#String_HostName,"")
@@ -1173,9 +1174,10 @@ myresult=MessageRequester("AD Import","Are you sure you wish to import from AD?"
  If myresult=#PB_MessageRequester_Yes
    StatusBarText(#StatusBar0,0,"Please wait, importing from AD...",#PB_StatusBar_Center)
     ClearGadgetItems(#Hosts_List)
-     SetGadgetText(#String_HostName, "")
-      SetGadgetText(#String_Description, "")
-       DeleteFile("hosts.dat", #PB_FileSystem_Force)
+     ClearList(nslist())
+      SetGadgetText(#String_HostName, "")
+       SetGadgetText(#String_Description, "")
+        DeleteFile("hosts.dat", #PB_FileSystem_Force)
        RunProgram("cmd","/c adfind -csv -f "+Chr(34)+"(&(objectCategory=computer)(!userAccountControl:1.2.840.113556.1.4.803:=2)(!primaryGroupID=516)(!operatingsystem=Windows Server*))"+Chr(34)+" -sl -nodn name description -nocsvheader -csvnoq > PC.csv","",#PB_Program_Hide|#PB_Program_Wait)
       FillListIcon(#Hosts_List,"PC.csv")
      SaveFile()
@@ -1435,7 +1437,7 @@ result=InitNetwork()
      While WindowEvent():Wend;Refresh status bar
       StatusBarText(#StatusBar0,0,"Copying files to "+myhostname,#PB_StatusBar_Center)
        myos=GetOSType(myhostname)
-    If myos="32-bit"
+    If myos="32"
       CreateServerINIFile("Serve86\")
        Delay(1000)
      If FileOp("Serve86\*.*","\\"+myhostname+"\C$\RCTemp",#FO_COPY) = 0
@@ -1447,7 +1449,7 @@ result=InitNetwork()
           connectsuccess=0
            Goto theend
      EndIf
-    ElseIf myos="64-bit"
+    ElseIf myos="64"
       CreateServerINIFile("Serve\")
        Delay(1000)
      If FileOp("Serve\*.*","\\"+myhostname+"\C$\RCTemp",#FO_COPY) = 0
@@ -1565,7 +1567,7 @@ Procedure ConnectHostButton()
         selection=nslist()\myindexlist
          CreateConnection(myhostname)
    Else
-    AddElement(nslist())
+Debug    AddElement(nslist())
      nslist()\myhostnamelist = myhostname
      nslist()\mydescriptionlist = mydescription
      If CountGadgetItems(#Hosts_List)=0
@@ -2066,6 +2068,11 @@ EndIf
       DisableGadget(#Connect_Button,0)
    Else
       DisableGadget(#Connect_Button,1)
+   EndIf
+   If FindPartWin(" - service mode")
+     DisableGadget(#App_ImportFromAD,1)
+   Else
+     DisableGadget(#App_ImportFromAD,0)
    EndIf
 ;}
 
@@ -2847,8 +2854,9 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 7
-; Folding = AAAAAAAAAAAAA+
+; CursorPosition = 1451
+; FirstLine = 125
+; Folding = ADAAQAAAJAAAA+
 ; EnableThread
 ; EnableXP
 ; UseIcon = gfx\Icon.ico
