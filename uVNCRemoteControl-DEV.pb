@@ -1816,8 +1816,8 @@ AddGadgetItem(#Panel_1,-1,"About")
                                          "oldnesjunkie@gmail.com" + #CRLF$ +
 	                                       "Version 1.0.3 - February 5, 2021" + #CRLF$ +
                                          "Uses ADFind version 1.52.00" + #CRLF$ +
-                                         "Uses PAExec Version 1.27" + #CRLF$ +
-                                         "Uses UltraVNC Version 1.3.2" + #CRLF$ + #CRLF$ +
+                                         "Uses PAExec Version 1.28" + #CRLF$ +
+                                         "Uses UltraVNC Version 1.3.3 dev 8" + #CRLF$ + #CRLF$ +
                                          "Created with the following from the PureBasic Forums:"+#CRLF$+
                                          "FindStringRev by skywalk"+#CRLF$+
                                          "ListIcon Sort by netmaestro"+#CRLF$+
@@ -2855,7 +2855,7 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 5
+; CursorPosition = 10
 ; Folding = AAAAAAAAAAAAA+
 ; EnableThread
 ; EnableXP
