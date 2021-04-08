@@ -3,7 +3,7 @@
 ;*          By            *
 ;*     OldNESJunkie       *
 ;*      07/03/2015        *
-;*  Updated 2/7/2021      *
+;*  Updated 4/8/2021      *
 ;**************************
 
 ;FIXME - Connecting to new host, then trying to edit its description causes a crash
@@ -788,6 +788,7 @@ If totalItemsSelected=1
       SetGadgetText(#String_Search,"")
      SaveFile()
    EndIf
+  totalItemsSelected=0
 Else
  clearcurrenthost=MessageRequester("","Are you sure you wish to remove all selected items ?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
    If clearcurrenthost=#PB_MessageRequester_Yes
@@ -1717,7 +1718,7 @@ PanelGadget(#Panel_1,0,0,453,430)
    MenuItem(#PopUp_RemoveHost, "",CatchImage(#Recycle,?recycle))
     DisableMenuItem(#Menu_PopUp,#PopUp_Disconnect,1)
  EndIf
-  ListIconGadget(#Hosts_List,10,10,425,300,"Host Name",150,#PB_ListIcon_AlwaysShowSelection|#PB_ListIcon_FullRowSelect|#PB_ListIcon_MultiSelect)
+  ListIconGadget(#Hosts_List,10,0,425,308,"Host Name",150,#PB_ListIcon_AlwaysShowSelection|#PB_ListIcon_FullRowSelect|#PB_ListIcon_MultiSelect)
    AddGadgetColumn(#Hosts_List,1,"Description",226)
     SetGadgetItemAttribute(#Hosts_List,1,#PB_ListIcon_ColumnWidth,130)
    AddGadgetColumn(#Hosts_List,2,"Index",0)
@@ -2854,9 +2855,8 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 1451
-; FirstLine = 125
-; Folding = ADAAQAAAJAAAA+
+; CursorPosition = 5
+; Folding = AAAAAAAAAAAAA+
 ; EnableThread
 ; EnableXP
 ; UseIcon = gfx\Icon.ico
