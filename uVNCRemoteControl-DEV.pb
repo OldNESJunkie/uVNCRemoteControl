@@ -6,8 +6,7 @@
 ;*  Updated 4/8/2021      *
 ;**************************
 
-;FIXME - Connecting to new host, then trying to edit its description causes a crash
-;FIXME - Removing multiples is one-off at the bottom, wrong one removed
+;FIXME - Connecting to new host, then trying to edit its description or remove it causes a crash
 
 ;  *******************
 ;  * Embed Help Text *
@@ -776,7 +775,7 @@ ProcedureReturn Result
 EndProcedure
 
 Procedure RemoveHost()
-Protected clearcurrenthost, myindex.s, NbItems, ni, Result
+Protected clearcurrenthost, myindex.s, ni, Result
 If totalItemsSelected=1
  clearcurrenthost=MessageRequester("","Are you sure you wish to remove "+GetGadgetText(#Hosts_List)+" ?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
    If clearcurrenthost=#PB_MessageRequester_Yes
@@ -787,13 +786,12 @@ If totalItemsSelected=1
        SetGadgetText(#String_Description,"")
       SetGadgetText(#String_Search,"")
      SaveFile()
+    totalItemsSelected=0
    EndIf
-  totalItemsSelected=0
 Else
  clearcurrenthost=MessageRequester("","Are you sure you wish to remove all selected items ?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
    If clearcurrenthost=#PB_MessageRequester_Yes
-     NbItems = CountGadgetItems(#Hosts_List)
-      For ni = NbItems - 1 To 0 Step -1
+      For ni = CountGadgetItems(#Hosts_List) - 1 To 0 Step -1
        Result = GetGadgetItemState(#Hosts_List, ni)
         If Result & #PB_ListIcon_Selected
           myindex=GetGadgetItemText(#Hosts_List,ni,2)
@@ -1568,13 +1566,13 @@ Procedure ConnectHostButton()
         selection=nslist()\myindexlist
          CreateConnection(myhostname)
    Else
-Debug    AddElement(nslist())
+    AddElement(nslist())
      nslist()\myhostnamelist = myhostname
      nslist()\mydescriptionlist = mydescription
      If CountGadgetItems(#Hosts_List)=0
        nslist()\myindexlist=0
      Else
-       nslist()\myindexlist=ListSize(nslist())
+       nslist()\myindexlist=ListSize(nslist());-1
      EndIf
       *old_element = @nslist()
        SortStructuredList(nslist(),#PB_Sort_Ascending,OffsetOf(nslist\myhostnamelist),TypeOf(nslist\myhostnamelist))
@@ -1814,10 +1812,10 @@ AddGadgetItem(#Panel_1,-1,"About")
                                          "by" + #CRLF$ +
 	                                       "Daniel Ford" + #CRLF$ +
                                          "oldnesjunkie@gmail.com" + #CRLF$ +
-	                                       "Version 1.0.3 - February 5, 2021" + #CRLF$ +
+	                                       "Version 1.0.5 - October 6, 2021" + #CRLF$ +
                                          "Uses ADFind version 1.52.00" + #CRLF$ +
                                          "Uses PAExec Version 1.28" + #CRLF$ +
-                                         "Uses UltraVNC Version 1.3.3 dev 8" + #CRLF$ + #CRLF$ +
+                                         "Uses UltraVNC Version 1.3.4.2" + #CRLF$ + #CRLF$ +
                                          "Created with the following from the PureBasic Forums:"+#CRLF$+
                                          "FindStringRev by skywalk"+#CRLF$+
                                          "ListIcon Sort by netmaestro"+#CRLF$+
@@ -2615,7 +2613,7 @@ EndIf
           RunProgram("http://www.uvnc.com","","")
 
         Case #Weblink_4
-          RunProgram("http://oldnesjunkie.duckdns.org","","")
+          RunProgram("https://oldnesjunkie.com","","")
 ;}
 
      EndSelect
@@ -2855,7 +2853,7 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 10
+; CursorPosition = 9
 ; Folding = AAAAAAAAAAAAA+
 ; EnableThread
 ; EnableXP
