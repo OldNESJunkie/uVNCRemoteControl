@@ -6,7 +6,7 @@
 ;*  Updated 4/8/2021      *
 ;**************************
 
-;FIXME - Connecting to new host, then trying to edit its description or remove it causes a crash
+;FIXME - When editing description on an entry after deletion of another entry description off by one entry
 
 ;  *******************
 ;  * Embed Help Text *
@@ -55,6 +55,7 @@ Global selection, myid.l, myprog.l
 Global ProcessFirst.ProcessFirst
 Global ProcessNext.ProcessNext
 Global NewList MyVNCList.VNCList()
+Global *old_element
 ;}
 
 ;  ******************************
@@ -153,6 +154,7 @@ EndEnumeration
 ;  * Procedures *
 ;{ **************
 Declare.l FileOp(FromLoc.s, ToLoc.s, Flag)
+Declare RefreshList()
 Declare RemoveService(hostname.s)
 Declare SaveFile()
 Declare WriteLog(filename.s, error.s)
@@ -324,9 +326,12 @@ Procedure IsMouseOver(hWnd)
     ProcedureReturn Result
 EndProcedure
 
-Procedure EditMyDescription(Title$)
-  Protected Window, Editme, OK, Cancel
-selection=GetGadgetState(#Hosts_List)
+Procedure EditMyDescription(Title$) ;FIXME: <-Needs more work
+  Protected Window, Editme, OK, Cancel, myselection
+myselection=GetGadgetState(#Hosts_List)
+Debug myselection
+;ResetList(nslist())
+Debug SelectElement(nslist(),Val(GetGadgetItemText(#Hosts_List,myselection,2)))
 GetWindowRect_(WindowID(#Window_0),win.RECT); Store its dimensions in "win" structure.
  x=win\left : y=win\top : w=win\right-win\left ; Get it's X/Y position and width.
   Window = OpenWindow(#PB_Any,x+50,y+150,300,85,Title$,#PB_Window_ScreenCentered)
@@ -347,19 +352,19 @@ GetWindowRect_(WindowID(#Window_0),win.RECT); Store its dimensions in "win" stru
 
       Case #PB_Event_Gadget      
         If EventGadget() = OK
-         If GetGadgetText(EditMe)<>""
+         ;If GetGadgetText(EditMe)<>""
           SetGadgetText(#Hosts_List,myhostname+Chr(10)+GetGadgetText(EditMe))
-           SelectElement(nslist(),Val(GetGadgetItemText(#Hosts_List,selection,2)))
+           ;ChangeCurrentElement(nslist(),*old_element)
             nslist()\mydescriptionlist=GetGadgetText(EditMe)
-             SetGadgetItemText(#Hosts_List,selection,nslist()\mydescriptionlist,1)
+             SetGadgetItemText(#Hosts_List,myselection,nslist()\mydescriptionlist,1)
               SaveFile()
-            If GetGadgetText(#String_Hostname)<>""
-              SetGadgetText(#String_Description,GetGadgetText(EditMe))
-            EndIf
-             Break
-         Else
-           Break
-         EndIf
+          If GetGadgetText(#String_Hostname)<>""
+            SetGadgetText(#String_Description,GetGadgetText(EditMe))
+          EndIf
+            Break
+         ;Else
+           ;Break
+         ;EndIf
         EndIf
 
         If EventGadget() = Cancel
@@ -374,19 +379,19 @@ GetWindowRect_(WindowID(#Window_0),win.RECT); Store its dimensions in "win" stru
       EndSelect
 
       If GetKeyState_(#VK_RETURN) > 1
-       If GetGadgetText(EditMe)<>""
+;        If GetGadgetText(EditMe)<>""
          SetGadgetText(#Hosts_List,myhostname+Chr(10)+GetGadgetText(EditMe))
-          SelectElement(nslist(),Val(GetGadgetItemText(#Hosts_List,selection,2)))
+          ;ChangeCurrentElement(nslist(),*old_element)
            nslist()\mydescriptionlist=GetGadgetText(EditMe)
-            SetGadgetItemText(#Hosts_List,selection,nslist()\mydescriptionlist,1)
+            SetGadgetItemText(#Hosts_List,myselection,nslist()\mydescriptionlist,1)
              SaveFile()
         If GetGadgetText(#String_Hostname)<>""
           SetGadgetText(#String_Description,GetGadgetText(EditMe))
         EndIf
           Break
-       Else
-         Break
-       EndIf
+;        Else
+;          Break
+;        EndIf
       EndIf
   ForEver
  EndIf
@@ -775,11 +780,11 @@ ProcedureReturn Result
 EndProcedure
 
 Procedure RemoveHost()
-Protected clearcurrenthost, myindex.s, ni, Result
+Protected clearcurrenthost, myindex.s, ni, Result, NbItems
 If totalItemsSelected=1
  clearcurrenthost=MessageRequester("","Are you sure you wish to remove "+GetGadgetText(#Hosts_List)+" ?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
    If clearcurrenthost=#PB_MessageRequester_Yes
-     SelectElement(nslist(),Val(GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),2)));selection,2)))
+     SelectElement(nslist(),Val(GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),2)))
       DeleteElement(nslist())
        RemoveGadgetItem(#Hosts_List,GetGadgetState(#Hosts_List))
         SetGadgetText(#String_HostName,"")
@@ -791,13 +796,14 @@ If totalItemsSelected=1
 Else
  clearcurrenthost=MessageRequester("","Are you sure you wish to remove all selected items ?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
    If clearcurrenthost=#PB_MessageRequester_Yes
-      For ni = CountGadgetItems(#Hosts_List) - 1 To 0 Step -1
-       Result = GetGadgetItemState(#Hosts_List, ni)
-        If Result & #PB_ListIcon_Selected
-          myindex=GetGadgetItemText(#Hosts_List,ni,2)
-           SelectElement(nslist(),Val(myindex))
-            DeleteElement(nslist())
-             RemoveGadgetItem(#Hosts_List, ni)
+     NbItems=CountGadgetItems(#Hosts_List)
+Debug NbItems
+      For ni = NbItems -1 To 0 Step -1
+       result=GetGadgetItemState(#Hosts_List,ni)
+        If result & #PB_ListIcon_Selected
+          SelectElement(nslist(), ni)
+           DeleteElement(nslist())
+          RemoveGadgetItem(#Hosts_List, ni)
         EndIf
       Next
      SaveFile()
@@ -1158,13 +1164,19 @@ OpenFile(1,file)
 EndProcedure
 
 Procedure SaveFile()
+Protected NbItems, host.s, desc.s, add.s
 DeleteFile("hosts.dat",#PB_FileSystem_Force)
+NbItems=CountGadgetItems(#Hosts_List)
  CreateFile(0,"hosts.dat")
   OpenFile(0,"hosts.dat")
-   ResetList(nslist())
-    While NextElement(nslist())
-     WriteStringN(0,nslist()\myhostnamelist+","+nslist()\mydescriptionlist)
-    Wend
+   For x=0 To NbItems
+    host=GetGadgetItemText(#Hosts_List,x)
+    desc=GetGadgetItemText(#Hosts_List,x,1)
+    add=host+","+desc
+    If add<>","
+      WriteStringN(0,add,#PB_Ascii)
+    EndIf
+   Next
   CloseFile(0)
 EndProcedure
 
@@ -1414,6 +1426,27 @@ Else
  EndIf
 EndIf
   If pingresult<>-1
+;Add PC to list
+  If SearchListIcon(#Hosts_List,myhostname,@Pos,0)=#False
+    AddElement(nslist())
+     nslist()\myhostnamelist = myhostname
+     nslist()\mydescriptionlist = mydescription
+     If CountGadgetItems(#Hosts_List)=0
+       nslist()\myindexlist=0
+     Else
+       nslist()\myindexlist=ListSize(nslist())-1;<-Take 1 away from the size as it starts from 0
+     EndIf
+      *old_element = @nslist()
+       SortStructuredList(nslist(),#PB_Sort_Ascending,OffsetOf(nslist\myhostnamelist),TypeOf(nslist\myhostnamelist))
+        ResetList(nslist())
+         ChangeCurrentElement(nslist(),*old_element)
+          AddGadgetItem(#Hosts_List,0,nslist()\myhostnamelist+Chr(10)+nslist()\mydescriptionlist+Chr(10)+nslist()\myindexlist)
+          selection=0
+         SetColumnWidths()
+        SaveFile()
+       SetGadgetState(#Hosts_List,0)
+  EndIf
+;-----------------------------------
     WriteLog(myhostname,"Ping Time: "+pingresult+"ms"+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
      StatusBarText(#StatusBar0,0,"Creating uVNC files",#PB_StatusBar_Center)
        CreatePassword()
@@ -1566,24 +1599,7 @@ Procedure ConnectHostButton()
         selection=nslist()\myindexlist
          CreateConnection(myhostname)
    Else
-    AddElement(nslist())
-     nslist()\myhostnamelist = myhostname
-     nslist()\mydescriptionlist = mydescription
-     If CountGadgetItems(#Hosts_List)=0
-       nslist()\myindexlist=0
-     Else
-       nslist()\myindexlist=ListSize(nslist());-1
-     EndIf
-      *old_element = @nslist()
-       SortStructuredList(nslist(),#PB_Sort_Ascending,OffsetOf(nslist\myhostnamelist),TypeOf(nslist\myhostnamelist))
-        ResetList(nslist())
-         ChangeCurrentElement(nslist(),*old_element)
-          AddGadgetItem(#Hosts_List,0,nslist()\myhostnamelist+Chr(10)+nslist()\mydescriptionlist+Chr(10)+nslist()\myindexlist)
-          selection=0
-         SetColumnWidths()
-        SaveFile()
-       SetGadgetState(#Hosts_List,0)
-      CreateConnection(myhostname)
+     CreateConnection(myhostname)
    EndIf
 EndProcedure
 
@@ -1719,7 +1735,7 @@ PanelGadget(#Panel_1,0,0,453,430)
   ListIconGadget(#Hosts_List,10,0,425,308,"Host Name",150,#PB_ListIcon_AlwaysShowSelection|#PB_ListIcon_FullRowSelect|#PB_ListIcon_MultiSelect)
    AddGadgetColumn(#Hosts_List,1,"Description",226)
     SetGadgetItemAttribute(#Hosts_List,1,#PB_ListIcon_ColumnWidth,130)
-   AddGadgetColumn(#Hosts_List,2,"Index",0)
+   AddGadgetColumn(#Hosts_List,2,"Index",0);<-80 to view indexes, 0 to hide
   HyperLinkGadget(#Text_HostName,10,317,65,20,"Host Name:",#Blue)
    BalloonTip(#Window_0,#Text_HostName,"Click to clear the host name field","",#MB_ICONINFORMATION)
    StringGadget(#String_HostName,80,315,250,20,"")
@@ -1791,9 +1807,9 @@ AddGadgetItem(#Panel_1,-1,"Program Options")
      CheckBoxGadget(#App_RemoveFilesOnExit,95,90,150,20,"Remove App Files on Exit")
       CheckBoxGadget(#App_SaveWindowPosition,95,110,140,20,"Save Window Position")
        CheckBoxGadget(#App_SortHostsOnExit,95,130,150,20,"Sort Hosts On Exit (A-Z)")
-        ButtonGadget(#App_ClearHostsList,95,150,130,30,"Clear Hosts List")
-         ButtonGadget(#App_ImportFromAD,95,190,130,30,"Import Hosts from AD")
-          ButtonGadget(#App_Help,280,350,120,30,"Help")
+        ButtonGadget(#App_ClearHostsList,15,350,130,30,"Clear Hosts List")
+         ButtonGadget(#App_ImportFromAD,162,350,131,30,"Import Hosts from AD")
+          ButtonGadget(#App_Help,310,350,120,30,"Help")
            If FileSize("Update uVNC.exe")<>-1
             ButtonGadget(#App_Update,15,350,120,30,"Check for Update")
            EndIf
@@ -1812,10 +1828,10 @@ AddGadgetItem(#Panel_1,-1,"About")
                                          "by" + #CRLF$ +
 	                                       "Daniel Ford" + #CRLF$ +
                                          "oldnesjunkie@gmail.com" + #CRLF$ +
-	                                       "Version 1.0.5 - October 6, 2021" + #CRLF$ +
-                                         "Uses ADFind version 1.52.00" + #CRLF$ +
+	                                       "Version 1.0.6 - December 16, 2021" + #CRLF$ +
+                                         "Uses ADFind version 1.56.00" + #CRLF$ +
                                          "Uses PAExec Version 1.28" + #CRLF$ +
-                                         "Uses UltraVNC Version 1.3.4.2" + #CRLF$ + #CRLF$ +
+                                         "Uses UltraVNC Version 1.3.6.0" + #CRLF$ + #CRLF$ +
                                          "Created with the following from the PureBasic Forums:"+#CRLF$+
                                          "FindStringRev by skywalk"+#CRLF$+
                                          "ListIcon Sort by netmaestro"+#CRLF$+
@@ -2068,9 +2084,12 @@ EndIf
    Else
       DisableGadget(#Connect_Button,1)
    EndIf
+
    If FindPartWin(" - service mode")
+     DisableGadget(#App_ClearHostsList,1)
      DisableGadget(#App_ImportFromAD,1)
    Else
+     DisableGadget(#App_ClearHostsList,0)
      DisableGadget(#App_ImportFromAD,0)
    EndIf
 ;}
@@ -2673,6 +2692,7 @@ EndIf
                 If FindPartWin(selected+" (")
                   DisableMenuItem(#Menu_PopUp, #PopUp_RemoveHost,1)
                    DisableMenuItem(#Menu_PopUp, #PopUp_Disconnect,0)
+                    DisableMenuItem(#Menu_PopUp,#PopUp_EditDescription,1)
                 Else
                   DisableMenuItem(#Menu_PopUp, #PopUp_Disconnect,1)
                 EndIf
@@ -2853,8 +2873,9 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 9
-; Folding = AAAAAAAAAAAAA+
+; CursorPosition = 1737
+; FirstLine = 163
+; Folding = ADEAAAAAAMAAA+
 ; EnableThread
 ; EnableXP
 ; UseIcon = gfx\Icon.ico
