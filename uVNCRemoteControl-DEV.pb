@@ -3,10 +3,8 @@
 ;*          By            *
 ;*     OldNESJunkie       *
 ;*      07/03/2015        *
-;*  Updated 4/8/2021      *
+;*  Updated 218/2022      *
 ;**************************
-
-;FIXME - When editing description on an entry after deletion of another entry description off by one entry
 
 ;  *******************
 ;  * Embed Help Text *
@@ -55,7 +53,6 @@ Global selection, myid.l, myprog.l
 Global ProcessFirst.ProcessFirst
 Global ProcessNext.ProcessNext
 Global NewList MyVNCList.VNCList()
-Global *old_element
 ;}
 
 ;  ******************************
@@ -153,154 +150,45 @@ EndEnumeration
 ;  **************
 ;  * Procedures *
 ;{ **************
+
+;{ Procedure declarations
+Declare BalloonTip(iWindowID.i, iGadget.i, sTip.s , sTitle.s, iIcon.i)
+Declare CheckForUpdate()
+Declare CheckRunningProcesses()
+Declare ClearHosts()
+Declare ConnectHostButton()
+Declare ConnectHostMouse()
+Declare CreateConnection(hostname.s)
+Declare CreateLocalFiles()
+Declare.s CreatePassword()
+Declare CreateServerINIFile(dir.s)
+Declare.i CreateViewerConfigFile(hostname.s)
+Declare DisconnectFromPC()
+Declare EditMyDescription(Title$)
 Declare.l FileOp(FromLoc.s, ToLoc.s, Flag)
+Declare FindPartWin(part$)
+Declare.i FindStringRev(String$, StringToFind$, UseCase.i=#PB_String_NoCase)
+Declare.s GetIPAddress(host.s)
+Declare.s GetOSType(hostname.s)
+Declare.s GetPidProcessEx(Name.s)
+Declare.s IdleTimeout(Title$)
+Declare ImportAD()
+Declare IsMouseOver(hWnd)
+Declare.q lngNewAddress(strAdd.s)
+Declare Match(FirstString.s,SecondString.s,Type.b,CaseSensitive.b)
+Declare PingHost(Address.s,PING_TIMEOUT=1000,strMessage.s = "Echo This Information Back To Me")
 Declare RefreshList()
+Declare RemoveHost()
 Declare RemoveService(hostname.s)
 Declare SaveFile()
+Declare SearchMe(search.s)
+Declare SetColumnWidths()
+Declare SetIcons()
+Declare SortFile(file.s)
 Declare WriteLog(filename.s, error.s)
-;     ===================
-;     | Windows/Gadgets |
-;{    ===================
-Procedure FindPartWin(part$)
-  r=GetWindow_(GetDesktopWindow_(),#GW_CHILD)
-  Repeat
-    t$=Space(999) : GetWindowText_(r,t$,999)
-    If FindString(LCase(t$), LCase(part$),1)<>0 And IsWindowVisible_(r)=#True
-      w=r
-    Else
-      r=GetWindow_(r,#GW_HWNDNEXT)
-    EndIf
-  Until r=0 Or w<>0
-  ProcedureReturn w
-EndProcedure
-
-Procedure.s IdleTimeout(Title$)
-  Protected Window, Trackme, OK, myidle, setme, mystate
-GetWindowRect_(WindowID(#Window_0),win.RECT); Store its dimensions in "win" structure.
- x=win\left : y=win\top : w=win\right-win\left ; Get it's X/Y position and width.
-  Window = OpenWindow(#PB_Any,x+75,y+150,300,105,Title$,#PB_Window_ScreenCentered)
-   DisableGadget(#Hosts_List,1)
-    SetWindowPos_(WindowID(Window),0,x+75,y+150,0,0,#SWP_NOSIZE|#SWP_NOACTIVATE); Dock other window.
-     StickyWindow(Window,1)
-  If Window
-    Trackme  = TrackBarGadget(#PB_Any,10,10,280,32,0,12,#PB_TrackBar_Ticks)
-               TextGadget(#PB_Any,21,40,280,20,"0     5    10   15   20   25   30   35   40   45   50   55   60")
-    OK      = ButtonGadget(#PB_Any,110,68,80,25,"OK",#PB_Button_Default)
-OpenPreferences("vnc.prefs")
-  setme=ReadPreferenceInteger("IdleTime",0)
-ClosePreferences()
-;{ Get Idle Timeout
-Select setme
-  Case 0
-    mystate=0
-  Case 300
-    mystate=1
-  Case 600
-    mystate=2
-  Case 900
-    mystate=3
-  Case 1200
-    mystate=4
-  Case 1500
-    mystate=5
-  Case 1800
-    mystate=6
-  Case 2100
-    mystate=7
-  Case 2400
-    mystate=8
-  Case 2700
-    mystate=9
-  Case 3000
-    mystate=10
-  Case 3300
-    mystate=11
-  Case 3600
-    mystate=12
-EndSelect
+Declare x_littlehelp(title.s,text.s,pointer.i=0,flags.i=-1)
+Declare.s x_peeks(addr.i,length.i=-1,flags.i=-1,terminator.s="")
 ;}
-  SetGadgetState(Trackme,mystate)
-    Repeat
-;{ Get trackgadget state
-Select GetGadgetState(Trackme)
-  Case 0
-    myidle=0
-  Case 1
-    myidle=300
-  Case 2
-    myidle=600
-  Case 3
-    myidle=900
-  Case 4
-    myidle=1200
-  Case 5
-    myidle=1500
-  Case 6
-    myidle=1800
-  Case 7
-    myidle=2100
-  Case 8
-    myidle=2400
-  Case 9
-    myidle=2700
-  Case 10
-    myidle=3000
-  Case 11
-    myidle=3300
-  Case 12
-    myidle=3600
-EndSelect
-;}
-     Select WaitWindowEvent()
-       Case #PB_Event_Gadget      
-        If EventGadget() = OK
-         If GetGadgetState(Trackme)<>0
-           OpenPreferences("vnc.prefs")
-            WritePreferenceInteger("ConfirmExit",0)
-             WritePreferenceInteger("IdleTimeout",1)
-              WritePreferenceInteger("IdleTime",myidle)
-           ClosePreferences()
-           flip17=0
-            SetGadgetState(#Viewer_ConfirmExit, 0)
-             DisableGadget(#Viewer_ConfirmExit, 1)
-         Else
-           OpenPreferences("vnc.prefs")
-            WritePreferenceInteger("IdleTimeout",0)
-             WritePreferenceInteger("IdleTime",myidle)
-           ClosePreferences()
-            DisableGadget(#Viewer_ConfirmExit, 0)
-         EndIf
-          Break
-        EndIf
-       Case #PB_Event_MoveWindow
-         GetWindowRect_(WindowID(#Window_0),win.RECT); Store its dimensions in "win" structure.
-          x=win\left : y=win\top : w=win\right-win\left ; Get it's X/Y position and width.
-           SetWindowPos_(WindowID(Window),0,x+75,y+150,0,0,#SWP_NOSIZE);|#SWP_NOACTIVATE); Dock other window.
-      EndSelect
-      If GetKeyState_(#VK_RETURN) > 1
-       If GetGadgetState(Trackme)<>0
-         OpenPreferences("vnc.prefs")
-          WritePreferenceInteger("ConfirmExit",0)
-           WritePreferenceInteger("IdleTimeout",1)
-            WritePreferenceInteger("IdleTime",myidle)
-             ClosePreferences()
-              flip17=0
-               SetGadgetState(#Viewer_ConfirmExit, 0)
-                DisableGadget(#Viewer_ConfirmExit, 1)
-                 Break
-       Else
-         OpenPreferences("vnc.prefs")
-          WritePreferenceInteger("IdleTimeout",0)
-           WritePreferenceInteger("IdleTime",myidle)
-            ClosePreferences()
-             DisableGadget(#Viewer_ConfirmExit, 0)
-              Break
-       EndIf
-      EndIf
-    ForEver
-  EndIf
-  CloseWindow(Window)
-EndProcedure
 
 Procedure BalloonTip(iWindowID.i, iGadget.i, sTip.s , sTitle.s, iIcon.i)
     iToolTip = CreateWindowEx_(0, "ToolTips_Class32", "", #WS_POPUP | #TTS_NOPREFIX | #TTS_BALLOON, 0, 0, 0, 0, iWindowID, 0, GetModuleHandle_(0), 0)
@@ -319,217 +207,8 @@ Procedure BalloonTip(iWindowID.i, iGadget.i, sTip.s , sTitle.s, iIcon.i)
     EndIf
 EndProcedure
 
-Procedure IsMouseOver(hWnd)
-    GetWindowRect_(hWnd,r.RECT)
-    GetCursorPos_(p.POINT)
-    Result = PtInRect_(r,p\y << 32 + p\x)
-    ProcedureReturn Result
-EndProcedure
-
-Procedure EditMyDescription(Title$) ;FIXME: <-Needs more work
-  Protected Window, Editme, OK, Cancel, myselection
-myselection=GetGadgetState(#Hosts_List)
-Debug myselection
-;ResetList(nslist())
-Debug SelectElement(nslist(),Val(GetGadgetItemText(#Hosts_List,myselection,2)))
-GetWindowRect_(WindowID(#Window_0),win.RECT); Store its dimensions in "win" structure.
- x=win\left : y=win\top : w=win\right-win\left ; Get it's X/Y position and width.
-  Window = OpenWindow(#PB_Any,x+50,y+150,300,85,Title$,#PB_Window_ScreenCentered)
-   DisableGadget(#Hosts_List,1)
-    SetWindowPos_(WindowID(Window),0,x+50,y+150,0,0,#SWP_NOSIZE|#SWP_NOACTIVATE); Dock other window.
-     StickyWindow(Window,1)
-  
- If Window
-   EditMe  = StringGadget(#PB_Any,10,10,280,20,"")
-    OK      = ButtonGadget(#PB_Any,40,48,80,25,"OK",#PB_Button_Default)
-     Cancel  = ButtonGadget(#PB_Any,180,48,80,25,"Cancel")
-      SetActiveGadget(EditMe)
-       SetGadgetText(EditMe,mydescription)
-
-  Repeat
-
-    Select WaitWindowEvent()
-
-      Case #PB_Event_Gadget      
-        If EventGadget() = OK
-         ;If GetGadgetText(EditMe)<>""
-          SetGadgetText(#Hosts_List,myhostname+Chr(10)+GetGadgetText(EditMe))
-           ;ChangeCurrentElement(nslist(),*old_element)
-            nslist()\mydescriptionlist=GetGadgetText(EditMe)
-             SetGadgetItemText(#Hosts_List,myselection,nslist()\mydescriptionlist,1)
-              SaveFile()
-          If GetGadgetText(#String_Hostname)<>""
-            SetGadgetText(#String_Description,GetGadgetText(EditMe))
-          EndIf
-            Break
-         ;Else
-           ;Break
-         ;EndIf
-        EndIf
-
-        If EventGadget() = Cancel
-          Break
-        EndIf
-
-      Case #PB_Event_MoveWindow
-         GetWindowRect_(WindowID(#Window_0),win.RECT); Store its dimensions in "win" structure.
-          x=win\left : y=win\top : w=win\right-win\left ; Get it's X/Y position and width.
-           SetWindowPos_(WindowID(Window),0,x+50,y+150,0,0,#SWP_NOSIZE);|#SWP_NOACTIVATE); Dock other window.
-
-      EndSelect
-
-      If GetKeyState_(#VK_RETURN) > 1
-;        If GetGadgetText(EditMe)<>""
-         SetGadgetText(#Hosts_List,myhostname+Chr(10)+GetGadgetText(EditMe))
-          ;ChangeCurrentElement(nslist(),*old_element)
-           nslist()\mydescriptionlist=GetGadgetText(EditMe)
-            SetGadgetItemText(#Hosts_List,myselection,nslist()\mydescriptionlist,1)
-             SaveFile()
-        If GetGadgetText(#String_Hostname)<>""
-          SetGadgetText(#String_Description,GetGadgetText(EditMe))
-        EndIf
-          Break
-;        Else
-;          Break
-;        EndIf
-      EndIf
-  ForEver
- EndIf
-  CloseWindow(Window)
-EndProcedure
-
-Procedure SetColumnWidths()
-;Set Column Widths Automatically
-firstcolumnwidth=SendMessage_(GadgetID(#Hosts_List),#LVM_GETCOLUMNWIDTH,0,#Null)
-secondcolumnwidth=SendMessage_(GadgetID(#Hosts_List),#LVM_GETCOLUMNWIDTH,1,#Null)
-SendMessage_(GadgetID(#Hosts_List), #LVM_SETCOLUMNWIDTH, 0, #LVSCW_AUTOSIZE)
-SendMessage_(GadgetID(#Hosts_List), #LVM_SETCOLUMNWIDTH, 1, #LVSCW_AUTOSIZE)
-getfirstcolumnwidth=SendMessage_(GadgetID(#Hosts_List),#LVM_GETCOLUMNWIDTH,0,#Null)
-getsecondcolumnwidth=SendMessage_(GadgetID(#Hosts_List),#LVM_GETCOLUMNWIDTH,1,#Null)
- 
-If getfirstcolumnwidth < firstcolumnwidth
-SendMessage_(GadgetID(#Hosts_List), #LVM_SETCOLUMNWIDTH, 0, #LVSCW_AUTOSIZE_USEHEADER)
-EndIf
-If getsecondcolumnwidth < secondcolumnwidth
-SendMessage_(GadgetID(#Hosts_List), #LVM_SETCOLUMNWIDTH, 1, #LVSCW_AUTOSIZE_USEHEADER)
-EndIf
-EndProcedure
-
-Procedure Match(FirstString.s,SecondString.s,Type.b,CaseSensitive.b) 
-  If CaseSensitive=#False
-    FirstString=LCase(FirstString)
-    SecondString=LCase(SecondString)
-  EndIf
-
-  Select Type
-
-    Case 0
-      If FindString(FirstString,SecondString)
-        ProcedureReturn #True
-      EndIf
-
-    Case 1
-      If FirstString=SecondString
-        ProcedureReturn #True
-      EndIf
-
-    Case 2
-      If Left(FirstString,Len(SecondString))=SecondString
-        ProcedureReturn #True
-      EndIf
-
-    Case 3
-      If Right(FirstString,Len(SecondString))=SecondString
-        ProcedureReturn #True
-      EndIf
-
-  EndSelect
-EndProcedure
-
-Procedure.s GetPidProcessEx(Name.s)
-  ;/// Return all process id as string separate by comma
-  ;/// Author : jpd
-  Protected ProcLib
-  Protected ProcName.s
-  Protected Process.PROCESSENTRY32
-  Protected x
-  Protected retval=#False
-  Name=UCase(Name.s)
-  ProcLib= OpenLibrary(#PB_Any, "Kernel32.dll") 
-  If ProcLib
-    CompilerIf #PB_Compiler_Unicode
-      ProcessFirst           = GetFunction(ProcLib, "Process32FirstW") 
-      ProcessNext            = GetFunction(ProcLib, "Process32NextW") 
-    CompilerElse
-      ProcessFirst           = GetFunction(ProcLib, "Process32First") 
-      ProcessNext            = GetFunction(ProcLib, "Process32Next") 
-    CompilerEndIf
-    If  ProcessFirst And ProcessNext 
-      Process\dwSize = SizeOf(PROCESSENTRY32) 
-      Snapshot =CreateToolhelp32Snapshot_(#TH32CS_SNAPALL,0)
-      If Snapshot 
-        ProcessFound = ProcessFirst(Snapshot, Process) 
-        x=1
-        While ProcessFound 
-          ProcName=PeekS(@Process\szExeFile)
-          ProcName=GetFilePart(ProcName)
-          If UCase(ProcName)=UCase(Name)
-            If ProcessList.s<>"" : ProcessList+",": EndIf
-            ProcessList+Str(Process\th32ProcessID)
-          EndIf
-          ProcessFound = ProcessNext(Snapshot, Process) 
-          x=x+1  
-        Wend 
-      EndIf 
-      CloseHandle_(Snapshot) 
-    EndIf 
-    CloseLibrary(ProcLib) 
-  EndIf 
-  ProcedureReturn ProcessList
-
-EndProcedure
-
-Procedure SetIcons()
-Protected z
-For z = 0 To CountGadgetItems(#Hosts_List)-1
-  SetGadgetItemImage(#Hosts_List,z,CatchImage(#PC_Blank,?PCBlank))
-Next
-EndProcedure
-
-Procedure RefreshList()
-ClearGadgetItems(#Hosts_List)
-  ResetList(nslist())
-    While NextElement(nslist())
-      AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist)
-    Wend
-EndProcedure
-
-Procedure.i FindStringRev(String$, StringToFind$, UseCase.i=#PB_String_NoCase)
-  Protected.i length = Len(StringToFind$)
-  Protected.i *pos = @String$ + (Len(String$)-length) * SizeOf(Character)
-  While @String$ <= *pos
-    If CompareMemoryString(*pos, @StringToFind$, UseCase, length) = #PB_String_Equal ; = 0
-      ProcedureReturn (*pos - @String$) / SizeOf(Character) + 1
-    EndIf
-    *pos - SizeOf(Character)
-  Wend
-  ProcedureReturn 0
-EndProcedure
-
-Procedure SearchMe(search.s)
-ClearGadgetItems(#Hosts_List)
-If ListSize(nslist())>0
-  ResetList(nslist())
-    While NextElement(nslist())
-     If FindStringRev(nslist()\myhostnamelist,search,1)
-       AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist)
-     ElseIf FindStringRev(nslist()\mydescriptionlist,search,1)
-       AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist)
-     ElseIf GetGadgetText(#String_Search)=""
-       AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist)
-     EndIf
-    Wend
-EndIf
+Procedure CheckForUpdate()
+RunProgram("Update uVNC.exe","","")
 EndProcedure
 
 Procedure CheckRunningProcesses()
@@ -563,7 +242,7 @@ Procedure CheckRunningProcesses()
                     SetGadgetItemImage(#Hosts_List,bb,CatchImage(#PC_Connected,?PCBlank))
                   EndIf
                  Next bb
-                  DeleteElement(MyVNCList())
+                  DeleteElement(MyVNCList(),1)
                    WriteLog(myhostname,"All operations completed successfully - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
                     WriteLog(myhostname,"");For spacing
       If FindPartWin("- service mode")=#False
@@ -578,126 +257,231 @@ Procedure CheckRunningProcesses()
   Wend
  EndIf
 EndProcedure
-;}
 
-;     ===========
-;     | Network |
-;{    ===========
-Procedure.s GetIPAddress(host.s)
-  Protected *host.HOSTENT, *m
-  If host > ""
-    If WSAStartup_ ((1<<8|1), wsa.WSADATA) = #NOERROR
-      *m = AllocateMemory(#MAX_COMPUTERNAME_LENGTH+1)
-      PokeS(*m,host,#MAX_COMPUTERNAME_LENGTH,#PB_Ascii)
-      *host.HOSTENT = gethostbyname_(*m)
-      WSACleanup_()
-      FreeMemory(*m)
-      If *host
-        ProcedureReturn PeekS(inet_ntoa_(PeekL(PeekL(*host\h_addr_list))),#MAX_COMPUTERNAME_LENGTH,#PB_Ascii)
-      EndIf
-    EndIf
+Procedure ClearHosts()
+ clearallhosts=MessageRequester("Clear All Hosts", "Do you wish to clear all hosts?", #PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
+  If clearallhosts=#PB_MessageRequester_Yes
+    ClearGadgetItems(#Hosts_List)
+     ClearList(nslist())
+      SetGadgetText(#String_HostName, "")
+       SetGadgetText(#String_Description, "")
+        DeleteFile("hosts.dat", #PB_FileSystem_Force)
   EndIf
 EndProcedure
 
-Procedure.q lngNewAddress(strAdd.s)
-  Protected sDummy.s=strAdd
-  Protected Position = FindString(sDummy, ".",1)
-  If Position>0
-    Protected a1=Val(Left(sDummy,Position-1))
-    sDummy=Right(sDummy,Len(sDummy)-Position)
-    Position = FindString(sDummy, ".",1)
-    If Position>0
-      Protected A2=Val(Left(sDummy,Position-1))
-      sDummy=Right(sDummy,Len(sDummy)-Position)
-      Position = FindString(sDummy, ".",1)
-      If Position>0
-        Protected A3=Val(Left(sDummy,Position-1))
-        sDummy=Right(sDummy,Len(sDummy)-Position)
-        Protected A4=Val(sDummy)
-        Protected dummy.q=0
-        PokeB(@dummy,A1)
-        PokeB(@dummy+1,A2)
-        PokeB(@dummy+2,A3)
-        PokeB(@dummy+3,A4)
-        ProcedureReturn dummy
-      EndIf
-    EndIf
-  EndIf
-EndProcedure
-
-Procedure PingHost(Address.s,PING_TIMEOUT=1000,strMessage.s = "Echo This Information Back To Me")
-  If Ping_Port
-    Protected MsgLen = Len(strMessage) 
-    Protected ECHO.ICMP_ECHO_REPLY 
-    Protected IPAddressNumber.q = lngNewAddress(Address.s)
-    Protected *buffer=AllocateMemory(SizeOf(ICMP_ECHO_REPLY)+MsgLen) 
-    Protected lngResult = IcmpSendEcho_(Ping_Port, IPAddressNumber, @strMessage, MsgLen , #Null,*buffer, SizeOf(ICMP_ECHO_REPLY)+MsgLen,PING_TIMEOUT) 
-    If lngResult
-      CopyMemory(*buffer,@ECHO,SizeOf(ICMP_ECHO_REPLY)) 
-    EndIf
-    FreeMemory(*buffer)
-    If lngResult
-      ProcedureReturn ECHO\RoundTripTime
+Procedure ConnectHostButton()
+Protected pointer
+ myhostname=GetGadgetText(#String_HostName)
+  mydescription=GetGadgetText(#String_Description)
+   If SearchListIcon(#Hosts_List,myhostname,@Pos,0)=#True
+     mypos=GetGadgetState(#Hosts_List)
+      SetGadgetText(#String_Description,GetGadgetItemText(#Hosts_List,mypos,1))
+       SelectElement(nslist(),mypos)
+        selection=nslist()\myindexlist
+         CreateConnection(myhostname)
+          selection=0
     Else
-      ProcedureReturn -1
+     If FindString(myhostname,".",1)>0
+       pingresult=PingHost(myhostname,1000,"")
+     Else
+       myip.s=GetIPAddress(myhostname)
+        pingresult=PingHost(myip,1000,"")
+     EndIf
+      If pingresult<>-1
+        pointer=AddElement(nslist())
+         nslist()\myhostnamelist = myhostname
+         nslist()\mydescriptionlist = mydescription
+       If CountGadgetItems(#Hosts_List)=0
+         nslist()\myindexlist=0
+       Else
+         nslist()\myindexlist=ListSize(nslist())-1
+       EndIf
+         nslist()\mypointer=pointer
+        *old_element = @nslist()
+          ChangeCurrentElement(nslist(),*old_element)
+           AddGadgetItem(#Hosts_List,0,nslist()\myhostnamelist+Chr(10)+nslist()\mydescriptionlist+Chr(10)+nslist()\myindexlist+Chr(10)+nslist()\mypointer)
+            selection=0
+           SetColumnWidths()
+          SaveFile()
+         SetGadgetState(#Hosts_List,0)
+        CreateConnection(myhostname)
+      Else
+        MessageRequester("Error","Cannot connect to "+myhostname+"."+#CRLF$+"Make sure the computer is turned on and connected to the network.",#MB_ICONERROR)
+      EndIf
+   EndIf
+EndProcedure
+
+Procedure ConnectHostMouse()
+ If GetGadgetText(#Hosts_List)<>""
+   myhostname=GetGadgetText(#Hosts_List)
+     SetGadgetText(#String_HostName, myhostname)
+      SetGadgetText(#String_Description,GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),1))
+       CreateConnection(myhostname)
+ EndIf 
+EndProcedure
+
+Procedure CreateConnection(hostname.s)
+Protected checkvnc, connectsuccess, isrunning.s, myip.s, myos.s, pingresult, success
+
+checkvnc=0; Used when checking to see if the UltraVNC service is started on remote PC
+success=0; Used to add host to list only if connection was successful
+connectsuccess=0; Used to save if last connection attempt was successful
+While WaitWindowEvent(1)
+DisableGadget(#Panel_1,1):DisableGadget(#Text_HostName,1):DisableGadget(#Text_Description,1):DisableGadget(#Text_Search,1):DisableGadget(#String_Hostname,1):DisableGadget(#String_Description,1):DisableGadget(#String_Search,1)
+Wend
+If FindString(myhostname,".",1)>0
+  pingresult=PingHost(myhostname,1000,"")
+Else
+  myip=GetIPAddress(myhostname)
+   pingresult=PingHost(myip,1000,"")
+    WriteLog(myhostname,"");For spacing
+ If pingresult=-1
+   WriteLog(myhostname,"Unable to Ping host: "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+ EndIf
+EndIf
+  If pingresult<>-1
+    WriteLog(myhostname,"Ping Time: "+pingresult+"ms"+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+     StatusBarText(#StatusBar0,0,"Creating uVNC files",#PB_StatusBar_Center)
+       CreatePassword()
+        WriteLog(myhostname,"Successfully created all of the required local files - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+         StatusBarText(#StatusBar0,0,"Checking for uVNC on "+myhostname,#PB_StatusBar_Center)
+          WriteLog(myhostname,"Checking for running uVNC on remote computer "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+result=InitNetwork()
+  If result<>0
+    isopen=OpenNetworkConnection(myhostname,5900,#PB_Network_TCP,1000)
+   If isopen=0
+     StatusBarText(#StatusBar0,0,"No uVNC found on "+myhostname,#PB_StatusBar_Center)
+      WriteLog(myhostname,"No uVNC found running, continuing process on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+   Else
+     StatusBarText(#StatusBar0,0,"Found uVNC running on "+myhostname+", stopping and removing",#PB_StatusBar_Center)
+      WriteLog(myhostname,"uVNC found running, removing uVNC on remote computer "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+       RemoveService(myhostname)
+   EndIf
+  EndIf
+      CreateViewerConfigFile(myhostname)
+     While WindowEvent():Wend;Refresh status bar
+      StatusBarText(#StatusBar0,0,"Copying files to "+myhostname,#PB_StatusBar_Center)
+       myos=GetOSType(myhostname)
+    If myos="32"
+      CreateServerINIFile("Serve86\")
+       Delay(1000)
+     If FileOp("Serve86\*.*","\\"+myhostname+"\C$\RCTemp",#FO_COPY) = 0
+       WriteLog(myhostname,"Successfully copied required 32-bit files to "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+     Else
+       MessageRequester("Error","Failed to copy required files to "+myhostname+"."+#CRLF$+"Make sure you have admin rights on the remote computer.",#MB_ICONERROR)
+        WriteLog(myhostname,"Failed to copy required 32-bit files to "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+         success=0
+          connectsuccess=0
+           Goto theend
+     EndIf
+    ElseIf myos="64"
+      CreateServerINIFile("Serve\")
+       Delay(1000)
+     If FileOp("Serve\*.*","\\"+myhostname+"\C$\RCTemp",#FO_COPY) = 0
+       WriteLog(myhostname,"Successfully copied required 64-bit files to "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+     Else
+       MessageRequester("Error","Failed to copy required files to "+myhostname+"."+#CRLF$+"Make sure you have admin rights on the remote computer.",#MB_ICONERROR)
+        WriteLog(myhostname,"Failed to copy required 64-bit files to "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+         success=0
+          connectsuccess=0
+           Goto theend
+     EndIf
+    Else
+      MessageRequester("Error","Failed to determine OS type and copy files to "+myhostname+"."+#CRLF$+"Make sure you have admin rights on the remote computer.",#MB_ICONERROR)
+       WriteLog(myhostname,"Failed to determine OS type on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+        success=0
+         connectsuccess=0
+          Goto osfailure
     EndIf
+       WriteLog(myhostname,"Attempting to install and start uVNC service on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+      StatusBarText(#StatusBar0,0,"Starting uVNC server on "+myhostname,#PB_StatusBar_Center)
+     RunProgram("paexec","\\"+myhostname+" C:\RCTemp\winvnc -install","",#PB_Program_Hide|#PB_Program_Wait)
+    WriteLog(myhostname,"Checking uVNC service status on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+   While WindowEvent():Wend;Refresh status bar
+  StatusBarText(#StatusBar0,0,"Checking uVNC status on "+myhostname,#PB_StatusBar_Center)
+ Sleep_(2000)
+
+checkservice:
+
+result=InitNetwork()
+ If result<>0
+   isopen=OpenNetworkConnection(myhostname,5900,#PB_Network_TCP,1000)
+   If isopen=0
+     WriteLog(myhostname,"Re-checking uVNC service status on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+      checkvnc=checkvnc+1
+      Sleep_(2000)
+    If checkvnc=5
+      StatusBarText(#StatusBar0,0,"uVNC failed to start on "+myhostname+", starting removal process",#PB_StatusBar_Center)
+       Sleep_(2000)
+        WriteLog(myhostname,"uVNC service failed to start on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+         WriteLog(myhostname,"Starting removal process on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+         success=0
+        connectsuccess=0
+       checkvnc=0
+      RemoveService(myhostname)
+     Goto theend
+    EndIf
+     Goto checkservice
+  Else
+    WriteLog(myhostname,"uVNC found running on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+     success=1
+      StatusBarText(#StatusBar0,0,"Found uVNC running on "+myhostname+", starting uVNC viewer",#PB_StatusBar_Center)
+      While WindowEvent():Wend;Refresh status bar
+    Goto carryon
+  EndIf
+ EndIf
+
+carryon:
+
+ While WindowEvent():Wend;Refresh status bar
+  Delay(2000)
+   WriteLog(myhostname,"Starting uVNC viewer on localhost - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+    myprog=RunProgram("view\vncviewer","-config view\"+hostname+".vnc","",#PB_Program_Open|#PB_Program_Read|#PB_Program_Unicode)
+   If IsProgram(myprog)
+     myid=ProgramID(myprog)
+      AddElement(MyVNCList())
+       MyVNCList()\VNCHostName = hostname
+       MyVNCList()\VNCPID = myid
+       MyVNCList()\VNCSelection = Val(GetGadgetItemText(#Hosts_List,selection,2))
+;Enable Scroll Lock
+    If GetGadgetState(#App_EnableScrollLock)=1
+     If GetKeyState_(#VK_SCROLL)=0
+       keybd_event_(#VK_SCROLL,0,0,0)
+        keybd_event_(#VK_SCROLL,0,#KEYEVENTF_KEYUP,0)
+     EndIf
+    EndIf
+;*****************************************************
+connectsuccess=1
+ If connectsuccess=1
+  If GetGadgetText(#String_HostName) And GetGadgetText(#String_Description)<>""
+    OpenPreferences("vnc.prefs")
+     WritePreferenceString("LastConnect", GetGadgetText(#String_HostName)+","+GetGadgetText(#String_Description))
+      ClosePreferences()
+       connectsuccess=0
+  EndIf
+ EndIf
+   Else
+     connectsuccess=0
+      WriteLog(myhostname,"Could not capture the uVNC Viewer process, exiting - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+   EndIf
+
+theend:
+
+While WindowEvent():Wend;Refresh status bar
+
+osfailure:
+
+  StatusBarText(#StatusBar0,0,"Ready",#PB_StatusBar_Center)
+   DisableGadget(#Panel_1,0):DisableGadget(#Text_HostName,0):DisableGadget(#Text_Description,0):DisableGadget(#Text_Search,0):DisableGadget(#String_Hostname,0):DisableGadget(#String_Description,0):DisableGadget(#String_Search,0)
+  Else
+    MessageRequester("Error","Cannot connect to "+myhostname+"."+#CRLF$+"Make sure the computer is turned on and connected to the network.",#MB_ICONERROR)
+     WriteLog(myhostname,"")
+      WriteLog(myhostname,"Failed to connect to remote host "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
+     WriteLog(myhostname,"")
+    DisableGadget(#Panel_1,0):DisableGadget(#Text_HostName,0):DisableGadget(#Text_Description,0):DisableGadget(#Text_Search,0):DisableGadget(#String_Hostname,0):DisableGadget(#String_Description,0):DisableGadget(#String_Search,0)
   EndIf
 EndProcedure
-;}
 
-;     ===========
-;     | OS Type |
-;{    ===========
-;HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\Processor_Architecture
-Procedure.s GetOSType(hostname.s)
-Protected myprogram, output$
-myprogram=RunProgram("paexec ","\\"+myhostname+" wmic os get osarchitecture","",#PB_Program_Open|#PB_Program_Read|#PB_Program_Hide)
-output$=""
-If myprogram
- While ProgramRunning(myprogram)
-  If AvailableProgramOutput(myprogram)
-   output$ + ReadProgramString(myprogram) + Chr(13)
-  EndIf
- Wend
-output$ + "Exitcode: "+Str(ProgramExitCode(myprogram))
-If FindString(output$,"32",1,#PB_String_NoCase)
-Debug "OS is 32-Bit"
-  ProcedureReturn "32"
-ElseIf FindString(output$,"64",1,#PB_String_NoCase)
-Debug "OS is 64-Bit"
-  ProcedureReturn "64"
-EndIf
-CloseProgram(myprogram)
-EndIf
-EndProcedure
-;}
-
-;     ===========
-;     | Strings |
-;{    ===========
-Procedure.s CreatePassword()
-strInputString.s
-strCode.s
-intNameLength.i
-intRnd.i
-
-strInputString = "ABCDEF0123456789" ;Characters To choose from to generate random string
-intNameLength = 18 ;Define length of random string
-
-;Generate the random string
-For intStep = 1 To intNameLength
-   intRnd = Random(16)
-   strCode = strCode + Mid(strInputString, intRnd, 1)
-Next
-;Return the string
-PasswordHash.s = strCode
-ProcedureReturn PasswordHash
-EndProcedure
-;}
-
-;     =========
-;     | Files |
-;{    =========
 Procedure CreateLocalFiles()
 If FileSize("Logs")<>-2
   CreateDirectory("Logs")
@@ -749,202 +533,23 @@ CloseFile(10)
 EndIf
 EndProcedure
 
-Procedure ClearHosts()
- clearallhosts=MessageRequester("Clear All Hosts", "Do you wish to clear all hosts?", #PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
-  If clearallhosts=#PB_MessageRequester_Yes
-    ClearGadgetItems(#Hosts_List)
-     ClearList(nslist())
-      SetGadgetText(#String_HostName, "")
-       SetGadgetText(#String_Description, "")
-        DeleteFile("hosts.dat", #PB_FileSystem_Force)
-  EndIf
-EndProcedure
+Procedure.s CreatePassword()
+strInputString.s
+strCode.s
+intNameLength.i
+intRnd.i
 
-Procedure.l FileOp(FromLoc.s, ToLoc.s, Flag)
-  ;Flag can be the following: #FO_COPY, #FO_DELETE, #FO_MOVE, #FO_RENAME
-  Switches.SHFILEOPSTRUCT ;Windows API Structure
-  ;The filename needs to be double null-terminated.
-  temp1$=Space(#MAX_PATH+SizeOf(character))
-  RtlZeroMemory_(@temp1$, #MAX_PATH+SizeOf(character))
-  PokeS(@temp1$, FromLoc)
-  temp2$=Space(#MAX_PATH+SizeOf(character))
-  RtlZeroMemory_(@temp2$, #MAX_PATH+SizeOf(character))
-  PokeS(@temp2$, ToLoc)
-  Switches\wFunc = Flag
-  Switches\pFrom = @temp1$
-  Switches\pTo = @temp2$
-  Switches\fFlags = #FOF_NOCONFIRMATION | #FOF_NOCONFIRMMKDIR | #FOF_SIMPLEPROGRESS
-  Result.l = SHFileOperation_(@Switches)
-  ; If cancel was pressed then result will NOT be zero (0)
-ProcedureReturn Result
-EndProcedure
+strInputString = "ABCDEF0123456789" ;Characters To choose from to generate random string
+intNameLength = 18 ;Define length of random string
 
-Procedure RemoveHost()
-Protected clearcurrenthost, myindex.s, ni, Result, NbItems
-If totalItemsSelected=1
- clearcurrenthost=MessageRequester("","Are you sure you wish to remove "+GetGadgetText(#Hosts_List)+" ?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
-   If clearcurrenthost=#PB_MessageRequester_Yes
-     SelectElement(nslist(),Val(GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),2)))
-      DeleteElement(nslist())
-       RemoveGadgetItem(#Hosts_List,GetGadgetState(#Hosts_List))
-        SetGadgetText(#String_HostName,"")
-       SetGadgetText(#String_Description,"")
-      SetGadgetText(#String_Search,"")
-     SaveFile()
-    totalItemsSelected=0
-   EndIf
-Else
- clearcurrenthost=MessageRequester("","Are you sure you wish to remove all selected items ?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
-   If clearcurrenthost=#PB_MessageRequester_Yes
-     NbItems=CountGadgetItems(#Hosts_List)
-Debug NbItems
-      For ni = NbItems -1 To 0 Step -1
-       result=GetGadgetItemState(#Hosts_List,ni)
-        If result & #PB_ListIcon_Selected
-          SelectElement(nslist(), ni)
-           DeleteElement(nslist())
-          RemoveGadgetItem(#Hosts_List, ni)
-        EndIf
-      Next
-     SaveFile()
-  EndIf
-EndIf
-EndProcedure
-
-Procedure.i CreateViewerConfigFile(hostname.s)
-  Protected.i File, Result
-  ;Create the file if it doesn't exist
-  File = CreateFile(#PB_Any, "View\"+hostname+".vnc")
-  If File
-    WriteStringN(File, "[connection]", #PB_Ascii)
-    WriteStringN(File, "host=" + hostname, #PB_Ascii)
-    WriteStringN(File, "port=5900", #PB_Ascii)
-    WriteStringN(File, "password="+PasswordHash, #PB_Ascii)
-    WriteStringN(File, "proxyhost=", #PB_Ascii)
-    WriteStringN(File, "proxyport=0", #PB_Ascii)
-    WriteStringN(File, "[options]", #PB_Ascii)
-    WriteStringN(File, "use_encoding_0=1", #PB_Ascii)
-    WriteStringN(File, "use_encoding_1=1", #PB_Ascii)
-    WriteStringN(File, "use_encoding_2=1", #PB_Ascii)
-    WriteStringN(File, "use_encoding_3=0", #PB_Ascii)
-    WriteStringN(File, "use_encoding_4=1", #PB_Ascii)
-    WriteStringN(File, "use_encoding_5=1", #PB_Ascii)
-    WriteStringN(File, "use_encoding_6=1", #PB_Ascii)
-    WriteStringN(File, "use_encoding_7=1", #PB_Ascii)
-    WriteStringN(File, "use_encoding_8=1", #PB_Ascii)
-    WriteStringN(File, "use_encoding_9=1", #PB_Ascii)
-    WriteStringN(File, "use_encoding_10=1", #PB_Ascii)
-    WriteStringN(File, "use_encoding_11=0", #PB_Ascii)
-    WriteStringN(File, "use_encoding_12=0", #PB_Ascii)
-    WriteStringN(File, "use_encoding_13=0", #PB_Ascii)
-    WriteStringN(File, "use_encoding_14=0", #PB_Ascii)
-    WriteStringN(File, "use_encoding_15=0", #PB_Ascii)
-    WriteStringN(File, "use_encoding_16=1", #PB_Ascii)
-    WriteStringN(File, "use_encoding_17=1", #PB_Ascii)
-    WriteStringN(File, "use_encoding_18=1", #PB_Ascii)
-    WriteStringN(File, "use_encoding_19=1", #PB_Ascii)
-    WriteStringN(File, "preferred_encoding=16", #PB_Ascii)
-    WriteStringN(File, "restricted=0", #PB_Ascii)
-; View hosts screen only, no input from viewer
-  If GetGadgetState(#Viewer_ViewOnly)<>0
-    WriteStringN(File, "viewonly=1", #PB_Ascii)
-  Else
-    WriteStringN(File, "viewonly=0", #PB_Ascii)
-  EndIf
-;***********************
-; Show VNC connection status window
-  If GetGadgetState(#Viewer_StatusWindow)<>0
-    WriteStringN(File, "nostatus=0", #PB_Ascii)
-  Else
-    WriteStringN(File, "nostatus=1", #PB_Ascii)
-  EndIf
-;***********************
-    WriteStringN(File, "nohotkeys=0", #PB_Ascii)
-;Show Toolbar
-  If GetGadgetState(#Viewer_ShowToolbar)<>0
-    WriteStringN(File, "showtoolbar=1", #PB_Ascii)
-  Else
-    WriteStringN(File, "showtoolbar=0", #PB_Ascii)
-  EndIf
-;************
-;Automatic scaling - Window size matches host size
-  If GetGadgetState(#Viewer_AutoScale)<>0
-    WriteStringN(File, "autoscaling=1", #PB_Ascii)
-  Else
-    WriteStringN(File, "autoscaling=0", #PB_Ascii)
-  EndIf
-;***********
-;Fullscreen
-  If GetGadgetState(#Viewer_Fullscreen)<>0
-    WriteStringN(File, "fullscreen=1", #PB_Ascii)
-  Else
-    WriteStringN(File, "fullscreen=0", #PB_Ascii)
-  EndIf
-;**********
-    WriteStringN(File, "savepos=0", #PB_Ascii)
-    WriteStringN(File, "savesize=0", #PB_Ascii)
-;Enable Host screen stretch
-  If GetGadgetState(#Viewer_StretchScreen)<>0
-    WriteStringN(File, "directx=1", #PB_Ascii)
-  Else
-    WriteStringN(File, "directx=0", #PB_Ascii)
-  EndIf
-;*************************
-    WriteStringN(File, "autodetect=1", #PB_Ascii)
-;Enable 256 color mode
-  If GetGadgetState(#Viewer_256Colors)<>0
-    WriteStringN(File, "8bit=1", #PB_Ascii)
-  Else
-    WriteStringN(File, "8bit=0", #PB_Ascii)
-  EndIf
-;*********************
-    WriteStringN(File, "shared=0", #PB_Ascii);1 in original file
-    WriteStringN(File, "swapmouse=0", #PB_Ascii)
-    WriteStringN(File, "belldeiconify=0", #PB_Ascii)
-    WriteStringN(File, "emulate3=1", #PB_Ascii)
-    WriteStringN(File, "JapKeyboard=0", #PB_Ascii)
-    WriteStringN(File, "emulate3timeout=100", #PB_Ascii)
-    WriteStringN(File, "emulate3fuzz=4", #PB_Ascii)
-;Disable Clipboard
-If GetGadgetState(#Viewer_DisableClipboard)<>0
-    WriteStringN(File, "disableclipboard=1", #PB_Ascii);Clipboard disabled
-Else
-    WriteStringN(File, "disableclipboard=0", #PB_Ascii);Clipboard enabled
-EndIf
-;*****************
-    WriteStringN(File, "localcursor=1", #PB_Ascii);Show local cursor
-    WriteStringN(File, "scaling=0", #PB_Ascii)
-    WriteStringN(File, "cursorshape=0", #PB_Ascii);Sets the "Let remote server deal with mouse cursor", 1=viewer renders
-    WriteStringN(File, "noremotecursor=0", #PB_Ascii)
-    WriteStringN(File, "compresslevel=6", #PB_Ascii)
-    WriteStringN(File, "quality=6", #PB_Ascii)
-    WriteStringN(File, "serverscale=1", #PB_Ascii)
-    WriteStringN(File, "reconnect=5", #PB_Ascii); Time between auto-reconnect attempts
-    WriteStringN(File, "enablecache=0", #PB_Ascii)
-    WriteStringN(File, "quickoption=1", #PB_Ascii)
-    WriteStringN(File, "usedsmplugin=0", #PB_Ascii)
-    WriteStringN(File, "useproxy=0", #PB_Ascii)
-    WriteStringN(File, "sponsor=1", #PB_Ascii);Turns off the sponsor logo on connect screen
-    WriteStringN(File, "selectedscreen=1", #PB_Ascii)
-    WriteStringN(File, "dsmplugin=noplugin", #PB_Ascii)
-    WriteStringN(File, "autoreconnect=3", #PB_Ascii);How many tries to autoreconnect
-If GetGadgetState(#Viewer_ConfirmExit)<>0;Prompt when closing the remote connection
-    WriteStringN(File, "exitcheck=1", #PB_Ascii)   
-Else
-    WriteStringN(File, "exitcheck=0", #PB_Ascii)
-EndIf
-    WriteStringN(File, "filetransfertimeout=30", #PB_Ascii)
-    WriteStringN(File, "keepaliveinterval=5", #PB_Ascii)
-    WriteStringN(File, "socketkeepalivetimeout=10000", #PB_Ascii)
-    WriteStringN(File, "throttlemouse=0", #PB_Ascii)
-    WriteStringN(File, "autoacceptincoming=0", #PB_Ascii)
-    WriteStringN(File, "autoacceptnodsm=0", #PB_Ascii)
-    WriteStringN(File, "requireencryption=0", #PB_Ascii)
-    WriteStringN(File, "preemptiveupdates=0", #PB_Ascii)
-    CloseFile(File)
-    Result = #True
-  EndIf
-  ProcedureReturn Result
+;Generate the random string
+For intStep = 1 To intNameLength
+   intRnd = Random(16)
+   strCode = strCode + Mid(strInputString, intRnd, 1)
+Next
+;Return the string
+PasswordHash.s = strCode
+ProcedureReturn PasswordHash
 EndProcedure
 
 Procedure CreateServerINIFile(dir.s)
@@ -1128,12 +733,681 @@ ClosePreferences()
   ProcedureReturn Result
 EndProcedure
 
-Procedure WriteLog(filename.s, error.s)
-If logme=1
- OpenFile(0,"Logs\"+filename+".log",#PB_File_SharedRead|#PB_File_SharedWrite|#PB_File_Append)
-  WriteStringN(0, error.s, #PB_Ascii)
- CloseFile(0)
+Procedure.i CreateViewerConfigFile(hostname.s)
+  Protected.i File, Result
+  ;Create the file if it doesn't exist
+  File = CreateFile(#PB_Any, "View\"+hostname+".vnc")
+  If File
+    WriteStringN(File, "[connection]", #PB_Ascii)
+    WriteStringN(File, "host=" + hostname, #PB_Ascii)
+    WriteStringN(File, "port=5900", #PB_Ascii)
+    WriteStringN(File, "password="+PasswordHash, #PB_Ascii)
+    WriteStringN(File, "proxyhost=", #PB_Ascii)
+    WriteStringN(File, "proxyport=0", #PB_Ascii)
+    WriteStringN(File, "[options]", #PB_Ascii)
+    WriteStringN(File, "use_encoding_0=1", #PB_Ascii)
+    WriteStringN(File, "use_encoding_1=1", #PB_Ascii)
+    WriteStringN(File, "use_encoding_2=1", #PB_Ascii)
+    WriteStringN(File, "use_encoding_3=0", #PB_Ascii)
+    WriteStringN(File, "use_encoding_4=1", #PB_Ascii)
+    WriteStringN(File, "use_encoding_5=1", #PB_Ascii)
+    WriteStringN(File, "use_encoding_6=1", #PB_Ascii)
+    WriteStringN(File, "use_encoding_7=1", #PB_Ascii)
+    WriteStringN(File, "use_encoding_8=1", #PB_Ascii)
+    WriteStringN(File, "use_encoding_9=1", #PB_Ascii)
+    WriteStringN(File, "use_encoding_10=1", #PB_Ascii)
+    WriteStringN(File, "use_encoding_11=0", #PB_Ascii)
+    WriteStringN(File, "use_encoding_12=0", #PB_Ascii)
+    WriteStringN(File, "use_encoding_13=0", #PB_Ascii)
+    WriteStringN(File, "use_encoding_14=0", #PB_Ascii)
+    WriteStringN(File, "use_encoding_15=0", #PB_Ascii)
+    WriteStringN(File, "use_encoding_16=1", #PB_Ascii)
+    WriteStringN(File, "use_encoding_17=1", #PB_Ascii)
+    WriteStringN(File, "use_encoding_18=1", #PB_Ascii)
+    WriteStringN(File, "use_encoding_19=1", #PB_Ascii)
+    WriteStringN(File, "preferred_encoding=16", #PB_Ascii)
+    WriteStringN(File, "restricted=0", #PB_Ascii)
+; View hosts screen only, no input from viewer
+  If GetGadgetState(#Viewer_ViewOnly)<>0
+    WriteStringN(File, "viewonly=1", #PB_Ascii)
+  Else
+    WriteStringN(File, "viewonly=0", #PB_Ascii)
+  EndIf
+;***********************
+; Show VNC connection status window
+  If GetGadgetState(#Viewer_StatusWindow)<>0
+    WriteStringN(File, "nostatus=0", #PB_Ascii)
+  Else
+    WriteStringN(File, "nostatus=1", #PB_Ascii)
+  EndIf
+;***********************
+    WriteStringN(File, "nohotkeys=0", #PB_Ascii)
+;Show Toolbar
+  If GetGadgetState(#Viewer_ShowToolbar)<>0
+    WriteStringN(File, "showtoolbar=1", #PB_Ascii)
+  Else
+    WriteStringN(File, "showtoolbar=0", #PB_Ascii)
+  EndIf
+;************
+;Automatic scaling - Window size matches host size
+  If GetGadgetState(#Viewer_AutoScale)<>0
+    WriteStringN(File, "autoscaling=1", #PB_Ascii)
+  Else
+    WriteStringN(File, "autoscaling=0", #PB_Ascii)
+  EndIf
+;***********
+;Fullscreen
+  If GetGadgetState(#Viewer_Fullscreen)<>0
+    WriteStringN(File, "fullscreen=1", #PB_Ascii)
+  Else
+    WriteStringN(File, "fullscreen=0", #PB_Ascii)
+  EndIf
+;**********
+    WriteStringN(File, "savepos=0", #PB_Ascii)
+    WriteStringN(File, "savesize=0", #PB_Ascii)
+;Enable Host screen stretch
+  If GetGadgetState(#Viewer_StretchScreen)<>0
+    WriteStringN(File, "directx=1", #PB_Ascii)
+  Else
+    WriteStringN(File, "directx=0", #PB_Ascii)
+  EndIf
+;*************************
+    WriteStringN(File, "autodetect=1", #PB_Ascii)
+;Enable 256 color mode
+  If GetGadgetState(#Viewer_256Colors)<>0
+    WriteStringN(File, "8bit=1", #PB_Ascii)
+  Else
+    WriteStringN(File, "8bit=0", #PB_Ascii)
+  EndIf
+;*********************
+    WriteStringN(File, "shared=0", #PB_Ascii);1 in original file
+    WriteStringN(File, "swapmouse=0", #PB_Ascii)
+    WriteStringN(File, "belldeiconify=0", #PB_Ascii)
+    WriteStringN(File, "emulate3=1", #PB_Ascii)
+    WriteStringN(File, "JapKeyboard=0", #PB_Ascii)
+    WriteStringN(File, "emulate3timeout=100", #PB_Ascii)
+    WriteStringN(File, "emulate3fuzz=4", #PB_Ascii)
+;Disable Clipboard
+If GetGadgetState(#Viewer_DisableClipboard)<>0
+    WriteStringN(File, "disableclipboard=1", #PB_Ascii);Clipboard disabled
+Else
+    WriteStringN(File, "disableclipboard=0", #PB_Ascii);Clipboard enabled
 EndIf
+;*****************
+    WriteStringN(File, "localcursor=1", #PB_Ascii);Show local cursor
+    WriteStringN(File, "scaling=0", #PB_Ascii)
+    WriteStringN(File, "cursorshape=0", #PB_Ascii);Sets the "Let remote server deal with mouse cursor", 1=viewer renders
+    WriteStringN(File, "noremotecursor=0", #PB_Ascii)
+    WriteStringN(File, "compresslevel=6", #PB_Ascii)
+    WriteStringN(File, "quality=6", #PB_Ascii)
+    WriteStringN(File, "serverscale=1", #PB_Ascii)
+    WriteStringN(File, "reconnect=5", #PB_Ascii); Time between auto-reconnect attempts
+    WriteStringN(File, "enablecache=0", #PB_Ascii)
+    WriteStringN(File, "quickoption=1", #PB_Ascii)
+    WriteStringN(File, "usedsmplugin=0", #PB_Ascii)
+    WriteStringN(File, "useproxy=0", #PB_Ascii)
+    WriteStringN(File, "sponsor=1", #PB_Ascii);Turns off the sponsor logo on connect screen
+    WriteStringN(File, "selectedscreen=1", #PB_Ascii)
+    WriteStringN(File, "dsmplugin=noplugin", #PB_Ascii)
+    WriteStringN(File, "autoreconnect=3", #PB_Ascii);How many tries to autoreconnect
+If GetGadgetState(#Viewer_ConfirmExit)<>0;Prompt when closing the remote connection
+    WriteStringN(File, "exitcheck=1", #PB_Ascii)   
+Else
+    WriteStringN(File, "exitcheck=0", #PB_Ascii)
+EndIf
+    WriteStringN(File, "filetransfertimeout=30", #PB_Ascii)
+    WriteStringN(File, "keepaliveinterval=5", #PB_Ascii)
+    WriteStringN(File, "socketkeepalivetimeout=10000", #PB_Ascii)
+    WriteStringN(File, "throttlemouse=0", #PB_Ascii)
+    WriteStringN(File, "autoacceptincoming=0", #PB_Ascii)
+    WriteStringN(File, "autoacceptnodsm=0", #PB_Ascii)
+    WriteStringN(File, "requireencryption=0", #PB_Ascii)
+    WriteStringN(File, "preemptiveupdates=0", #PB_Ascii)
+    CloseFile(File)
+    Result = #True
+  EndIf
+  ProcedureReturn Result
+EndProcedure
+
+Procedure DisconnectFromPC()
+  disc=MessageRequester("Disconnect","Do you wish to disconnect from "+GetGadgetItemText(#Hosts_List,selection)+"?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION)
+  If disc=#PB_MessageRequester_Yes
+    serverselection.s=GetGadgetItemText(#Hosts_List,selection,0)
+     RunProgram("taskkill","/FI "+Chr(34)+"WINDOWTITLE eq "+serverselection+"*"+Chr(34)+" /t","",#PB_Program_Hide)
+      SetGadgetText(#String_HostName,"")
+       SetGadgetText(#String_Description,"")
+  EndIf
+EndProcedure
+
+Procedure EditMyDescription(Title$)
+Protected Window, EditMe, OK, Cancel
+SelectElement(nslist(),Val(GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),2)))
+GetWindowRect_(WindowID(#Window_0),win.RECT); Store its dimensions in "win" structure.
+ x=win\left : y=win\top : w=win\right-win\left ; Get it's X/Y position and width.
+  Window = OpenWindow(#PB_Any,x+75,y+150,340,85,Title$,#PB_Window_ScreenCentered)
+   DisableGadget(#Hosts_List,1)
+    SetWindowPos_(WindowID(Window),0,x+75,y+150,0,0,#SWP_NOSIZE|#SWP_NOACTIVATE); Dock other window.
+     StickyWindow(Window,1)
+  
+ If Window
+   EditMe  = StringGadget(#PB_Any,10,10,320,20,"")
+    OK      = ButtonGadget(#PB_Any,40,48,80,25,"OK",#PB_Button_Default)
+     Cancel  = ButtonGadget(#PB_Any,220,48,80,25,"Cancel")
+      SetActiveGadget(EditMe)
+       SetGadgetText(EditMe,nslist()\mydescriptionlist)
+
+  Repeat
+
+    Select WaitWindowEvent()
+
+      Case #PB_Event_Gadget      
+        If EventGadget() = OK
+          SetGadgetText(#Hosts_List,myhostname+Chr(10)+GetGadgetText(EditMe))
+           nslist()\mydescriptionlist=GetGadgetText(EditMe)
+            SetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),nslist()\mydescriptionlist,1)
+             SaveFile()
+          If GetGadgetText(#String_Hostname)<>""
+            SetGadgetText(#String_Description,nslist()\mydescriptionlist)
+          EndIf
+            Break
+        EndIf
+
+        If EventGadget() = Cancel
+          Break
+        EndIf
+
+      Case #PB_Event_MoveWindow
+         GetWindowRect_(WindowID(#Window_0),win.RECT); Store its dimensions in "win" structure.
+          x=win\left : y=win\top : w=win\right-win\left ; Get it's X/Y position and width.
+           SetWindowPos_(WindowID(Window),0,x+50,y+150,0,0,#SWP_NOSIZE);|#SWP_NOACTIVATE); Dock other window.
+
+      EndSelect
+
+  If GetKeyState_(#VK_RETURN) > 1
+    SetGadgetText(#Hosts_List,myhostname+Chr(10)+GetGadgetText(EditMe))
+     nslist()\mydescriptionlist=GetGadgetText(EditMe)
+      SetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),nslist()\mydescriptionlist,1)
+       SaveFile()
+   If GetGadgetText(#String_Hostname)<>""
+     SetGadgetText(#String_Description,nslist()\mydescriptionlist)
+   EndIf
+     Break
+  EndIf
+  ForEver
+ EndIf
+  CloseWindow(Window)
+EndProcedure
+
+Procedure.l FileOp(FromLoc.s, ToLoc.s, Flag)
+  ;Flag can be the following: #FO_COPY, #FO_DELETE, #FO_MOVE, #FO_RENAME
+  Switches.SHFILEOPSTRUCT ;Windows API Structure
+  ;The filename needs to be double null-terminated.
+  temp1$=Space(#MAX_PATH+SizeOf(character))
+  RtlZeroMemory_(@temp1$, #MAX_PATH+SizeOf(character))
+  PokeS(@temp1$, FromLoc)
+  temp2$=Space(#MAX_PATH+SizeOf(character))
+  RtlZeroMemory_(@temp2$, #MAX_PATH+SizeOf(character))
+  PokeS(@temp2$, ToLoc)
+  Switches\wFunc = Flag
+  Switches\pFrom = @temp1$
+  Switches\pTo = @temp2$
+  Switches\fFlags = #FOF_NOCONFIRMATION | #FOF_NOCONFIRMMKDIR | #FOF_SIMPLEPROGRESS
+  Result.l = SHFileOperation_(@Switches)
+  ; If cancel was pressed then result will NOT be zero (0)
+ProcedureReturn Result
+EndProcedure
+
+Procedure FindPartWin(part$)
+  r=GetWindow_(GetDesktopWindow_(),#GW_CHILD)
+  Repeat
+    t$=Space(999) : GetWindowText_(r,t$,999)
+    If FindString(LCase(t$), LCase(part$),1)<>0 And IsWindowVisible_(r)=#True
+      w=r
+    Else
+      r=GetWindow_(r,#GW_HWNDNEXT)
+    EndIf
+  Until r=0 Or w<>0
+  ProcedureReturn w
+EndProcedure
+
+Procedure.i FindStringRev(String$, StringToFind$, UseCase.i=#PB_String_NoCase)
+  Protected.i length = Len(StringToFind$)
+  Protected.i *pos = @String$ + (Len(String$)-length) * SizeOf(Character)
+  While @String$ <= *pos
+    If CompareMemoryString(*pos, @StringToFind$, UseCase, length) = #PB_String_Equal ; = 0
+      ProcedureReturn (*pos - @String$) / SizeOf(Character) + 1
+    EndIf
+    *pos - SizeOf(Character)
+  Wend
+  ProcedureReturn 0
+EndProcedure
+
+Procedure.s GetIPAddress(host.s)
+  Protected *host.HOSTENT, *m
+  If host > ""
+    If WSAStartup_ ((1<<8|1), wsa.WSADATA) = #NOERROR
+      *m = AllocateMemory(#MAX_COMPUTERNAME_LENGTH+1)
+      PokeS(*m,host,#MAX_COMPUTERNAME_LENGTH,#PB_Ascii)
+      *host.HOSTENT = gethostbyname_(*m)
+      WSACleanup_()
+      FreeMemory(*m)
+      If *host
+        ProcedureReturn PeekS(inet_ntoa_(PeekL(PeekL(*host\h_addr_list))),#MAX_COMPUTERNAME_LENGTH,#PB_Ascii)
+      EndIf
+    EndIf
+  EndIf
+EndProcedure
+
+Procedure.s GetOSType(hostname.s)
+Protected myprogram, output$
+myprogram=RunProgram("cmd","/c powershell "+Chr(34)+"Invoke-Command -computername "+hostname+" {(Get-CimInstance Win32_operatingsystem).OSArchitecture}"+Chr(34),"",#PB_Program_Open|#PB_Program_Read|#PB_Program_Hide)
+output$=""
+If myprogram
+ While ProgramRunning(myprogram)
+  If AvailableProgramOutput(myprogram)
+   output$ + ReadProgramString(myprogram) + Chr(13)
+Debug output$
+  EndIf
+ Wend
+output$ + "Exitcode: "+Str(ProgramExitCode(myprogram))
+If FindString(output$,"32-bit",1,#PB_String_NoCase)
+Debug "OS is 32-Bit"
+  ProcedureReturn "32"
+ElseIf FindString(output$,"64-bit",1,#PB_String_NoCase)
+Debug "OS is 64-Bit"
+  ProcedureReturn "64"
+EndIf
+CloseProgram(myprogram)
+EndIf
+EndProcedure
+
+Procedure.s GetPidProcessEx(Name.s)
+  ;/// Return all process id as string separate by comma
+  ;/// Author : jpd
+  Protected ProcLib
+  Protected ProcName.s
+  Protected Process.PROCESSENTRY32
+  Protected x
+  Protected retval=#False
+  Name=UCase(Name.s)
+  ProcLib= OpenLibrary(#PB_Any, "Kernel32.dll") 
+  If ProcLib
+    CompilerIf #PB_Compiler_Unicode
+      ProcessFirst           = GetFunction(ProcLib, "Process32FirstW") 
+      ProcessNext            = GetFunction(ProcLib, "Process32NextW") 
+    CompilerElse
+      ProcessFirst           = GetFunction(ProcLib, "Process32First") 
+      ProcessNext            = GetFunction(ProcLib, "Process32Next") 
+    CompilerEndIf
+    If  ProcessFirst And ProcessNext 
+      Process\dwSize = SizeOf(PROCESSENTRY32) 
+      Snapshot =CreateToolhelp32Snapshot_(#TH32CS_SNAPALL,0)
+      If Snapshot 
+        ProcessFound = ProcessFirst(Snapshot, Process) 
+        x=1
+        While ProcessFound 
+          ProcName=PeekS(@Process\szExeFile)
+          ProcName=GetFilePart(ProcName)
+          If UCase(ProcName)=UCase(Name)
+            If ProcessList.s<>"" : ProcessList+",": EndIf
+            ProcessList+Str(Process\th32ProcessID)
+          EndIf
+          ProcessFound = ProcessNext(Snapshot, Process) 
+          x=x+1  
+        Wend 
+      EndIf 
+      CloseHandle_(Snapshot) 
+    EndIf 
+    CloseLibrary(ProcLib) 
+  EndIf 
+  ProcedureReturn ProcessList
+
+EndProcedure
+
+Procedure.s IdleTimeout(Title$)
+  Protected Window, Trackme, OK, myidle, setme, mystate
+GetWindowRect_(WindowID(#Window_0),win.RECT); Store its dimensions in "win" structure.
+ x=win\left : y=win\top : w=win\right-win\left ; Get it's X/Y position and width.
+  Window = OpenWindow(#PB_Any,x+75,y+150,300,105,Title$,#PB_Window_ScreenCentered)
+   DisableGadget(#Hosts_List,1)
+    SetWindowPos_(WindowID(Window),0,x+75,y+150,0,0,#SWP_NOSIZE|#SWP_NOACTIVATE); Dock other window.
+     StickyWindow(Window,1)
+  If Window
+    Trackme  = TrackBarGadget(#PB_Any,10,10,280,32,0,12,#PB_TrackBar_Ticks)
+               TextGadget(#PB_Any,21,40,280,20,"0     5    10   15   20   25   30   35   40   45   50   55   60")
+    OK      = ButtonGadget(#PB_Any,110,68,80,25,"OK",#PB_Button_Default)
+OpenPreferences("vnc.prefs")
+  setme=ReadPreferenceInteger("IdleTime",0)
+ClosePreferences()
+;{ Get Idle Timeout
+Select setme
+  Case 0
+    mystate=0
+  Case 300
+    mystate=1
+  Case 600
+    mystate=2
+  Case 900
+    mystate=3
+  Case 1200
+    mystate=4
+  Case 1500
+    mystate=5
+  Case 1800
+    mystate=6
+  Case 2100
+    mystate=7
+  Case 2400
+    mystate=8
+  Case 2700
+    mystate=9
+  Case 3000
+    mystate=10
+  Case 3300
+    mystate=11
+  Case 3600
+    mystate=12
+EndSelect
+;}
+  SetGadgetState(Trackme,mystate)
+    Repeat
+;{ Get trackgadget state
+Select GetGadgetState(Trackme)
+  Case 0
+    myidle=0
+  Case 1
+    myidle=300
+  Case 2
+    myidle=600
+  Case 3
+    myidle=900
+  Case 4
+    myidle=1200
+  Case 5
+    myidle=1500
+  Case 6
+    myidle=1800
+  Case 7
+    myidle=2100
+  Case 8
+    myidle=2400
+  Case 9
+    myidle=2700
+  Case 10
+    myidle=3000
+  Case 11
+    myidle=3300
+  Case 12
+    myidle=3600
+EndSelect
+;}
+     Select WaitWindowEvent()
+       Case #PB_Event_Gadget      
+        If EventGadget() = OK
+         If GetGadgetState(Trackme)<>0
+           OpenPreferences("vnc.prefs")
+            WritePreferenceInteger("ConfirmExit",0)
+             WritePreferenceInteger("IdleTimeout",1)
+              WritePreferenceInteger("IdleTime",myidle)
+           ClosePreferences()
+           flip17=0
+            SetGadgetState(#Viewer_ConfirmExit, 0)
+             DisableGadget(#Viewer_ConfirmExit, 1)
+         Else
+           OpenPreferences("vnc.prefs")
+            WritePreferenceInteger("IdleTimeout",0)
+             WritePreferenceInteger("IdleTime",myidle)
+           ClosePreferences()
+            DisableGadget(#Viewer_ConfirmExit, 0)
+         EndIf
+          Break
+        EndIf
+       Case #PB_Event_MoveWindow
+         GetWindowRect_(WindowID(#Window_0),win.RECT); Store its dimensions in "win" structure.
+          x=win\left : y=win\top : w=win\right-win\left ; Get it's X/Y position and width.
+           SetWindowPos_(WindowID(Window),0,x+75,y+150,0,0,#SWP_NOSIZE);|#SWP_NOACTIVATE); Dock other window.
+      EndSelect
+      If GetKeyState_(#VK_RETURN) > 1
+       If GetGadgetState(Trackme)<>0
+         OpenPreferences("vnc.prefs")
+          WritePreferenceInteger("ConfirmExit",0)
+           WritePreferenceInteger("IdleTimeout",1)
+            WritePreferenceInteger("IdleTime",myidle)
+             ClosePreferences()
+              flip17=0
+               SetGadgetState(#Viewer_ConfirmExit, 0)
+                DisableGadget(#Viewer_ConfirmExit, 1)
+                 Break
+       Else
+         OpenPreferences("vnc.prefs")
+          WritePreferenceInteger("IdleTimeout",0)
+           WritePreferenceInteger("IdleTime",myidle)
+            ClosePreferences()
+             DisableGadget(#Viewer_ConfirmExit, 0)
+              Break
+       EndIf
+      EndIf
+    ForEver
+  EndIf
+  CloseWindow(Window)
+EndProcedure
+
+Procedure ImportAD()
+myresult=MessageRequester("AD Import","Are you sure you wish to import from AD?"+#CRLF$+"No Domain Controllers, Server OS or Disabled Computers."+#CRLF$+"This will clear your current hosts List.",#PB_MessageRequester_YesNo|#MB_ICONWARNING)
+ If myresult=#PB_MessageRequester_Yes
+   StatusBarText(#StatusBar0,0,"Please wait, importing from AD...",#PB_StatusBar_Center)
+    ClearGadgetItems(#Hosts_List)
+     ClearList(nslist())
+      SetGadgetText(#String_HostName, "")
+       SetGadgetText(#String_Description, "")
+        DeleteFile("hosts.dat", #PB_FileSystem_Force)
+       RunProgram("cmd","/c adfind -csv -f "+Chr(34)+"(&(objectCategory=computer)(!userAccountControl:1.2.840.113556.1.4.803:=2)(!primaryGroupID=516)(!operatingsystem=Windows Server*))"+Chr(34)+" -sl -nodn name description -nocsvheader -csvnoq > PC.csv","",#PB_Program_Hide|#PB_Program_Wait)
+      FillListIcon(#Hosts_List,"PC.csv")
+     SaveFile()
+    DeleteFile("pc.csv",#PB_FileSystem_Force)
+   StatusBarText(#StatusBar0,0,"Ready",#PB_StatusBar_Center)
+;Autosize the listicon columns
+SetColumnWidths()
+ Else
+   ;cancelled
+ EndIf
+EndProcedure
+
+Procedure IsMouseOver(hWnd)
+    GetWindowRect_(hWnd,r.RECT)
+    GetCursorPos_(p.POINT)
+    Result = PtInRect_(r,p\y << 32 + p\x)
+    ProcedureReturn Result
+EndProcedure
+
+Procedure.q lngNewAddress(strAdd.s)
+  Protected sDummy.s=strAdd
+  Protected Position = FindString(sDummy, ".",1)
+  If Position>0
+    Protected a1=Val(Left(sDummy,Position-1))
+    sDummy=Right(sDummy,Len(sDummy)-Position)
+    Position = FindString(sDummy, ".",1)
+    If Position>0
+      Protected A2=Val(Left(sDummy,Position-1))
+      sDummy=Right(sDummy,Len(sDummy)-Position)
+      Position = FindString(sDummy, ".",1)
+      If Position>0
+        Protected A3=Val(Left(sDummy,Position-1))
+        sDummy=Right(sDummy,Len(sDummy)-Position)
+        Protected A4=Val(sDummy)
+        Protected dummy.q=0
+        PokeB(@dummy,A1)
+        PokeB(@dummy+1,A2)
+        PokeB(@dummy+2,A3)
+        PokeB(@dummy+3,A4)
+        ProcedureReturn dummy
+      EndIf
+    EndIf
+  EndIf
+EndProcedure
+
+Procedure Match(FirstString.s,SecondString.s,Type.b,CaseSensitive.b) 
+  If CaseSensitive=#False
+    FirstString=LCase(FirstString)
+    SecondString=LCase(SecondString)
+  EndIf
+
+  Select Type
+
+    Case 0
+      If FindString(FirstString,SecondString)
+        ProcedureReturn #True
+      EndIf
+
+    Case 1
+      If FirstString=SecondString
+        ProcedureReturn #True
+      EndIf
+
+    Case 2
+      If Left(FirstString,Len(SecondString))=SecondString
+        ProcedureReturn #True
+      EndIf
+
+    Case 3
+      If Right(FirstString,Len(SecondString))=SecondString
+        ProcedureReturn #True
+      EndIf
+
+  EndSelect
+EndProcedure
+
+Procedure PingHost(Address.s,PING_TIMEOUT=1000,strMessage.s = "Echo This Information Back To Me")
+  If Ping_Port
+    Protected MsgLen = Len(strMessage) 
+    Protected ECHO.ICMP_ECHO_REPLY 
+    Protected IPAddressNumber.q = lngNewAddress(Address.s)
+    Protected *buffer=AllocateMemory(SizeOf(ICMP_ECHO_REPLY)+MsgLen) 
+    Protected lngResult = IcmpSendEcho_(Ping_Port, IPAddressNumber, @strMessage, MsgLen , #Null,*buffer, SizeOf(ICMP_ECHO_REPLY)+MsgLen,PING_TIMEOUT) 
+    If lngResult
+      CopyMemory(*buffer,@ECHO,SizeOf(ICMP_ECHO_REPLY)) 
+    EndIf
+    FreeMemory(*buffer)
+    If lngResult
+      ProcedureReturn ECHO\RoundTripTime
+    Else
+      ProcedureReturn -1
+    EndIf
+  EndIf
+EndProcedure
+
+Procedure RefreshList()
+ClearGadgetItems(#Hosts_List)
+ResetList(nslist())
+ While NextElement(nslist())
+   AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist+#LF$+nslist()\mypointer)
+ Wend
+EndProcedure
+
+Procedure RemoveHost()
+Protected clearcurrenthost, ni, Result, NbItems
+If totalItemsSelected=1
+  clearcurrenthost=MessageRequester("","Are you sure you wish to remove "+GetGadgetText(#Hosts_List)+" ?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
+ If clearcurrenthost=#PB_MessageRequester_Yes
+   SelectElement(nslist(),Val(GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),2)))
+    DeleteElement(nslist(),1)
+     RemoveGadgetItem(#Hosts_List,GetGadgetState(#Hosts_List))
+      SetGadgetText(#String_HostName,"")
+       SetGadgetText(#String_Description,"")
+        SetGadgetText(#String_Search,"")
+       SaveFile()
+      ClearList(nslist())
+     ClearGadgetItems(#Hosts_List)
+    FillListIcon(#Hosts_List,"hosts.dat")
+   totalItemsSelected=0
+ EndIf
+Else
+ clearcurrenthost=MessageRequester("","Are you sure you wish to remove all selected items ?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
+ If clearcurrenthost=#PB_MessageRequester_Yes
+   NbItems=CountGadgetItems(#Hosts_List)
+   For ni = NbItems -1 To 0 Step -1
+    result=GetGadgetItemState(#Hosts_List,ni)
+  If result & #PB_ListIcon_Selected
+    SelectElement(nslist(),ni)
+     DeleteElement(nslist(),1)
+      RemoveGadgetItem(#Hosts_List, ni)
+  EndIf
+   Next
+   SetGadgetText(#String_HostName,"")
+    SetGadgetText(#String_Description,"")
+     SetGadgetText(#String_Search,"")
+      SaveFile()
+      ClearList(nslist())
+     ClearGadgetItems(#Hosts_List)
+    FillListIcon(#Hosts_List,"hosts.dat")
+   totalItemsSelected=0
+ EndIf
+EndIf
+EndProcedure
+
+Procedure RemoveService(hostname.s)
+RunProgram("paexec","\\"+hostname+" C:\RCTemp\winvnc -uninstall","",#PB_Program_Hide|#PB_Program_Wait)
+ RunProgram("taskkill","/s \\"+hostname+" /f /im winvnc.exe","",#PB_Program_Hide|#PB_Program_Wait)
+  FileOp("\\"+hostname+"\C$\RCTemp","",#FO_DELETE)
+   DeleteFile("view\"+myhostname+".vnc", #PB_FileSystem_Force)
+    DeleteFile("view\options.vnc", #PB_FileSystem_Force)
+EndProcedure
+
+Procedure SaveFile()
+Protected NbItems, host.s, desc.s, add.s
+DeleteFile("hosts.dat",#PB_FileSystem_Force)
+NbItems=CountGadgetItems(#Hosts_List)
+ CreateFile(0,"hosts.dat")
+  OpenFile(0,"hosts.dat")
+   For x=0 To NbItems
+    host=GetGadgetItemText(#Hosts_List,x)
+    desc=GetGadgetItemText(#Hosts_List,x,1)
+    add=host+","+desc
+    If add<>","
+      WriteStringN(0,add,#PB_Ascii)
+    EndIf
+   Next
+  CloseFile(0)
+EndProcedure
+
+Procedure SearchMe(search.s)
+ClearGadgetItems(#Hosts_List)
+If ListSize(nslist())>0
+  ResetList(nslist())
+    While NextElement(nslist())
+     If FindStringRev(nslist()\myhostnamelist,search,1)
+       AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist+#LF$+nslist()\mypointer)
+     ElseIf FindStringRev(nslist()\mydescriptionlist,search,1)
+       AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist+#LF$+nslist()\mypointer)
+     ElseIf GetGadgetText(#String_Search)=""
+       AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist+#LF$+nslist()\mypointer)
+     EndIf
+    Wend
+EndIf
+EndProcedure
+
+Procedure SetColumnWidths()
+;Set Column Widths Automatically
+firstcolumnwidth=SendMessage_(GadgetID(#Hosts_List),#LVM_GETCOLUMNWIDTH,0,#Null)
+secondcolumnwidth=SendMessage_(GadgetID(#Hosts_List),#LVM_GETCOLUMNWIDTH,1,#Null)
+SendMessage_(GadgetID(#Hosts_List), #LVM_SETCOLUMNWIDTH, 0, #LVSCW_AUTOSIZE)
+SendMessage_(GadgetID(#Hosts_List), #LVM_SETCOLUMNWIDTH, 1, #LVSCW_AUTOSIZE)
+getfirstcolumnwidth=SendMessage_(GadgetID(#Hosts_List),#LVM_GETCOLUMNWIDTH,0,#Null)
+getsecondcolumnwidth=SendMessage_(GadgetID(#Hosts_List),#LVM_GETCOLUMNWIDTH,1,#Null)
+ 
+If getfirstcolumnwidth < firstcolumnwidth
+SendMessage_(GadgetID(#Hosts_List), #LVM_SETCOLUMNWIDTH, 0, #LVSCW_AUTOSIZE_USEHEADER)
+EndIf
+If getsecondcolumnwidth < secondcolumnwidth
+SendMessage_(GadgetID(#Hosts_List), #LVM_SETCOLUMNWIDTH, 1, #LVSCW_AUTOSIZE_USEHEADER)
+EndIf
+EndProcedure
+
+Procedure SetIcons()
+Protected z
+For z = 0 To CountGadgetItems(#Hosts_List)-1
+  SetGadgetItemImage(#Hosts_List,z,CatchImage(#PC_Blank,?PCBlank))
+Next
 EndProcedure
 
 Procedure SortFile(file.s)
@@ -1163,105 +1437,12 @@ OpenFile(1,file)
   CloseFile(1)
 EndProcedure
 
-Procedure SaveFile()
-Protected NbItems, host.s, desc.s, add.s
-DeleteFile("hosts.dat",#PB_FileSystem_Force)
-NbItems=CountGadgetItems(#Hosts_List)
- CreateFile(0,"hosts.dat")
-  OpenFile(0,"hosts.dat")
-   For x=0 To NbItems
-    host=GetGadgetItemText(#Hosts_List,x)
-    desc=GetGadgetItemText(#Hosts_List,x,1)
-    add=host+","+desc
-    If add<>","
-      WriteStringN(0,add,#PB_Ascii)
-    EndIf
-   Next
-  CloseFile(0)
-EndProcedure
-
-Procedure ImportAD()
-myresult=MessageRequester("AD Import","Are you sure you wish to import from AD?"+#CRLF$+"No Domain Controllers, Server OS or Disabled Computers."+#CRLF$+"This will clear your current hosts List.",#PB_MessageRequester_YesNo|#MB_ICONWARNING)
- If myresult=#PB_MessageRequester_Yes
-   StatusBarText(#StatusBar0,0,"Please wait, importing from AD...",#PB_StatusBar_Center)
-    ClearGadgetItems(#Hosts_List)
-     ClearList(nslist())
-      SetGadgetText(#String_HostName, "")
-       SetGadgetText(#String_Description, "")
-        DeleteFile("hosts.dat", #PB_FileSystem_Force)
-       RunProgram("cmd","/c adfind -csv -f "+Chr(34)+"(&(objectCategory=computer)(!userAccountControl:1.2.840.113556.1.4.803:=2)(!primaryGroupID=516)(!operatingsystem=Windows Server*))"+Chr(34)+" -sl -nodn name description -nocsvheader -csvnoq > PC.csv","",#PB_Program_Hide|#PB_Program_Wait)
-      FillListIcon(#Hosts_List,"PC.csv")
-     SaveFile()
-    DeleteFile("pc.csv",#PB_FileSystem_Force)
-   StatusBarText(#StatusBar0,0,"Ready",#PB_StatusBar_Center)
-;Autosize the listicon columns
-SetColumnWidths()
- Else
-   ;cancelled
- EndIf
-EndProcedure
-
-Procedure.s x_peeks(addr.i,length.i=-1,flags.i=-1,terminator.s=""); read string from mem until a null is found or max length is reached
-  Protected string.s, p.l
-  ; Global x_retval.i, x_peeks_read.i
-  ;
-  ; *** read a string from memory until terminating condition is met
-  ;
-  ; in:     addr.i             - location in memory
-  ;         [ length.i = n ]   - max length in BYTES
-  ;                    = -1    - default: ignore
-  ;         [ flags.i  = n ]   - #PB_Ascii, #PB_Unicode, #PB_UTF8
-  ;                    = -1    - default: use #PB_Ascii if program is compiled in ascii mode, #PB_Unicode if compiled in unicode mode
-  ;         terminator.s       - seperator
-  ; retval: .s                 - string found
-  ; out:    x_retval.i         - length of string as found in memory in BYTES
-  ;         x_peeks_read.i     - as x_retval.i
-  ;
-  ; notes:
-  ;
-  ; - terminating condition can be string, a null character, or hitting maximal length
-  ; - purebasic's peeks() uses chars not bytes! (in 4.02 the included helpfile is wrong)
-  ; - x_peeks() uses bytes not chars!
-  ; - a terminating zero in unicode mode is actually TWO zeroes, ie. $ 00 00!
-  ; - no support for UTF8 in memory, use ASCII
-  ;
-  If flags = -1
-    CompilerIf #PB_Compiler_Unicode
-      flags = #PB_Unicode
-    CompilerElse
-      flags = #PB_Ascii
-    CompilerEndIf
-  EndIf
-  ;
-  If length > 0
-    If flags = #PB_Unicode
-      string = PeekS(addr,length/2,flags)
-    Else
-      string = PeekS(addr,length,flags)
-    EndIf
-  Else
-    string = PeekS(addr,-1,flags)
-  EndIf
-  ;
-  x_retval = StringByteLength(string,flags)
-  If x_retval < length Or length = -1
-    If flags = #PB_Unicode
-      x_retval = x_retval+2
-    Else
-      x_retval = x_retval+1
-    EndIf
-  EndIf
-  ;
-  If terminator > ""
-    p = FindString(string,terminator,1)
-    If p > 0
-      string = Left(string,p-1)
-      x_retval = StringByteLength(string+terminator,flags)
-    EndIf
-  EndIf
-  ;
-  x_peeks_read = x_retval
-  ProcedureReturn string
+Procedure WriteLog(filename.s, error.s)
+If logme=1
+ OpenFile(0,"Logs\"+filename+".log",#PB_File_SharedRead|#PB_File_SharedWrite|#PB_File_Append)
+  WriteStringN(0, error.s, #PB_Ascii)
+ CloseFile(0)
+EndIf
 EndProcedure
 
 Procedure x_littlehelp(title.s,text.s,pointer.i=0,flags.i=-1); show a few small help windows
@@ -1375,243 +1556,69 @@ Procedure x_littlehelp(title.s,text.s,pointer.i=0,flags.i=-1); show a few small 
   FreeFont(font_nr)
   ;
 EndProcedure
-;}
 
-;     ==========
-;     | Update |
-;{    ==========
-Procedure CheckForUpdate()
-RunProgram("Update uVNC.exe","","")
-EndProcedure
-;}
-
-;     ==================
-;     | VNC Connection |
-;{    ==================
-Procedure DisconnectFromPC()
-  disc=MessageRequester("Disconnect","Do you wish to disconnect from "+GetGadgetItemText(#Hosts_List,selection)+"?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION)
-  If disc=#PB_MessageRequester_Yes
-    serverselection.s=GetGadgetItemText(#Hosts_List,selection,0)
-     RunProgram("taskkill","/FI "+Chr(34)+"WINDOWTITLE eq "+serverselection+"*"+Chr(34)+" /t","",#PB_Program_Hide)
-      SetGadgetText(#String_HostName,"")
-       SetGadgetText(#String_Description,"")
+Procedure.s x_peeks(addr.i,length.i=-1,flags.i=-1,terminator.s=""); read string from mem until a null is found or max length is reached
+  Protected string.s, p.l
+  ; Global x_retval.i, x_peeks_read.i
+  ;
+  ; *** read a string from memory until terminating condition is met
+  ;
+  ; in:     addr.i             - location in memory
+  ;         [ length.i = n ]   - max length in BYTES
+  ;                    = -1    - default: ignore
+  ;         [ flags.i  = n ]   - #PB_Ascii, #PB_Unicode, #PB_UTF8
+  ;                    = -1    - default: use #PB_Ascii if program is compiled in ascii mode, #PB_Unicode if compiled in unicode mode
+  ;         terminator.s       - seperator
+  ; retval: .s                 - string found
+  ; out:    x_retval.i         - length of string as found in memory in BYTES
+  ;         x_peeks_read.i     - as x_retval.i
+  ;
+  ; notes:
+  ;
+  ; - terminating condition can be string, a null character, or hitting maximal length
+  ; - purebasic's peeks() uses chars not bytes! (in 4.02 the included helpfile is wrong)
+  ; - x_peeks() uses bytes not chars!
+  ; - a terminating zero in unicode mode is actually TWO zeroes, ie. $ 00 00!
+  ; - no support for UTF8 in memory, use ASCII
+  ;
+  If flags = -1
+    CompilerIf #PB_Compiler_Unicode
+      flags = #PB_Unicode
+    CompilerElse
+      flags = #PB_Ascii
+    CompilerEndIf
   EndIf
-EndProcedure
-
-Procedure RemoveService(hostname.s)
-RunProgram("paexec","\\"+hostname+" C:\RCTemp\winvnc -uninstall","",#PB_Program_Hide|#PB_Program_Wait)
- RunProgram("taskkill","/s \\"+hostname+" /f /im winvnc.exe","",#PB_Program_Hide|#PB_Program_Wait)
-  FileOp("\\"+hostname+"\C$\RCTemp","",#FO_DELETE)
-   DeleteFile("view\"+myhostname+".vnc", #PB_FileSystem_Force)
-    DeleteFile("view\options.vnc", #PB_FileSystem_Force)
-EndProcedure
-
-Procedure CreateConnection(hostname.s)
-Protected checkvnc, connectsuccess, isrunning.s, myip.s, myos.s, pingresult, success
-
-checkvnc=0; Used when checking to see if the UltraVNC service is started on remote PC
-success=0; Used to add host to list only if connection was successful
-connectsuccess=0; Used to save if last connection attempt was successful
-While WaitWindowEvent(1)
-DisableGadget(#Panel_1,1):DisableGadget(#Text_HostName,1):DisableGadget(#Text_Description,1):DisableGadget(#Text_Search,1):DisableGadget(#String_Hostname,1):DisableGadget(#String_Description,1):DisableGadget(#String_Search,1)
-Wend
-If FindString(myhostname,".",1)>0
-  pingresult=PingHost(myhostname,1000,"")
-Else
-  myip=GetIPAddress(myhostname)
-   pingresult=PingHost(myip,1000,"")
-    WriteLog(myhostname,"");For spacing
- If pingresult=-1
-   WriteLog(myhostname,"Unable to Ping host: "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
- EndIf
-EndIf
-  If pingresult<>-1
-;Add PC to list
-  If SearchListIcon(#Hosts_List,myhostname,@Pos,0)=#False
-    AddElement(nslist())
-     nslist()\myhostnamelist = myhostname
-     nslist()\mydescriptionlist = mydescription
-     If CountGadgetItems(#Hosts_List)=0
-       nslist()\myindexlist=0
-     Else
-       nslist()\myindexlist=ListSize(nslist())-1;<-Take 1 away from the size as it starts from 0
-     EndIf
-      *old_element = @nslist()
-       SortStructuredList(nslist(),#PB_Sort_Ascending,OffsetOf(nslist\myhostnamelist),TypeOf(nslist\myhostnamelist))
-        ResetList(nslist())
-         ChangeCurrentElement(nslist(),*old_element)
-          AddGadgetItem(#Hosts_List,0,nslist()\myhostnamelist+Chr(10)+nslist()\mydescriptionlist+Chr(10)+nslist()\myindexlist)
-          selection=0
-         SetColumnWidths()
-        SaveFile()
-       SetGadgetState(#Hosts_List,0)
-  EndIf
-;-----------------------------------
-    WriteLog(myhostname,"Ping Time: "+pingresult+"ms"+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-     StatusBarText(#StatusBar0,0,"Creating uVNC files",#PB_StatusBar_Center)
-       CreatePassword()
-        WriteLog(myhostname,"Successfully created all of the required local files - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-         StatusBarText(#StatusBar0,0,"Checking for uVNC on "+myhostname,#PB_StatusBar_Center)
-          WriteLog(myhostname,"Checking for running uVNC on remote computer "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-result=InitNetwork()
-  If result<>0
-    isopen=OpenNetworkConnection(myhostname,5900,#PB_Network_TCP,1000)
-   If isopen=0
-     StatusBarText(#StatusBar0,0,"No uVNC found on "+myhostname,#PB_StatusBar_Center)
-      WriteLog(myhostname,"No uVNC found running, continuing process on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-   Else
-     StatusBarText(#StatusBar0,0,"Found uVNC running on "+myhostname+", stopping and removing",#PB_StatusBar_Center)
-      WriteLog(myhostname,"uVNC found running, removing uVNC on remote computer "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-       RemoveService(myhostname)
-   EndIf
-  EndIf
-      CreateViewerConfigFile(myhostname)
-     While WindowEvent():Wend;Refresh status bar
-      StatusBarText(#StatusBar0,0,"Copying files to "+myhostname,#PB_StatusBar_Center)
-       myos=GetOSType(myhostname)
-    If myos="32"
-      CreateServerINIFile("Serve86\")
-       Delay(1000)
-     If FileOp("Serve86\*.*","\\"+myhostname+"\C$\RCTemp",#FO_COPY) = 0
-       WriteLog(myhostname,"Successfully copied required 32-bit files to "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-     Else
-       MessageRequester("Error","Failed to copy required files to "+myhostname+"."+#CRLF$+"Make sure you have admin rights on the remote computer.",#MB_ICONERROR)
-        WriteLog(myhostname,"Failed to copy required 32-bit files to "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-         success=0
-          connectsuccess=0
-           Goto theend
-     EndIf
-    ElseIf myos="64"
-      CreateServerINIFile("Serve\")
-       Delay(1000)
-     If FileOp("Serve\*.*","\\"+myhostname+"\C$\RCTemp",#FO_COPY) = 0
-       WriteLog(myhostname,"Successfully copied required 64-bit files to "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-     Else
-       MessageRequester("Error","Failed to copy required files to "+myhostname+"."+#CRLF$+"Make sure you have admin rights on the remote computer.",#MB_ICONERROR)
-        WriteLog(myhostname,"Failed to copy required 64-bit files to "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-         success=0
-          connectsuccess=0
-           Goto theend
-     EndIf
+  ;
+  If length > 0
+    If flags = #PB_Unicode
+      string = PeekS(addr,length/2,flags)
     Else
-      MessageRequester("Error","Failed to determine OS type and copy files to "+myhostname+"."+#CRLF$+"Make sure you have admin rights on the remote computer.",#MB_ICONERROR)
-       WriteLog(myhostname,"Failed to determine OS type on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-        success=0
-         connectsuccess=0
-          Goto osfailure
+      string = PeekS(addr,length,flags)
     EndIf
-       WriteLog(myhostname,"Attempting to install and start uVNC service on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-      StatusBarText(#StatusBar0,0,"Starting uVNC server on "+myhostname,#PB_StatusBar_Center)
-     RunProgram("paexec","\\"+myhostname+" C:\RCTemp\winvnc -install","",#PB_Program_Hide|#PB_Program_Wait)
-    WriteLog(myhostname,"Checking uVNC service status on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-   While WindowEvent():Wend;Refresh status bar
-  StatusBarText(#StatusBar0,0,"Checking uVNC status on "+myhostname,#PB_StatusBar_Center)
- Sleep_(2000)
-
-checkservice:
-
-result=InitNetwork()
- If result<>0
-   isopen=OpenNetworkConnection(myhostname,5900,#PB_Network_TCP,1000)
-   If isopen=0
-     WriteLog(myhostname,"Re-checking uVNC service status on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-      checkvnc=checkvnc+1
-      Sleep_(2000)
-    If checkvnc=5
-      StatusBarText(#StatusBar0,0,"uVNC failed to start on "+myhostname+", starting removal process",#PB_StatusBar_Center)
-       Sleep_(2000)
-        WriteLog(myhostname,"uVNC service failed to start on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-         WriteLog(myhostname,"Starting removal process on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-         success=0
-        connectsuccess=0
-       checkvnc=0
-      RemoveService(myhostname)
-     Goto theend
-    EndIf
-     Goto checkservice
   Else
-    WriteLog(myhostname,"uVNC found running on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-     success=1
-      StatusBarText(#StatusBar0,0,"Found uVNC running on "+myhostname+", starting uVNC viewer",#PB_StatusBar_Center)
-      While WindowEvent():Wend;Refresh status bar
-    Goto carryon
+    string = PeekS(addr,-1,flags)
   EndIf
- EndIf
-
-carryon:
-
- While WindowEvent():Wend;Refresh status bar
-  Delay(2000)
-   WriteLog(myhostname,"Starting uVNC viewer on localhost - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-    myprog=RunProgram("view\vncviewer","-config view\"+hostname+".vnc","",#PB_Program_Open|#PB_Program_Read|#PB_Program_Unicode)
-   If IsProgram(myprog)
-     myid=ProgramID(myprog)
-      AddElement(MyVNCList())
-       MyVNCList()\VNCHostName = hostname
-       MyVNCList()\VNCPID = myid
-       MyVNCList()\VNCSelection = Val(GetGadgetItemText(#Hosts_List,selection,2))
-;Enable Scroll Lock
-    If GetGadgetState(#App_EnableScrollLock)=1
-     If GetKeyState_(#VK_SCROLL)=0
-       keybd_event_(#VK_SCROLL,0,0,0)
-        keybd_event_(#VK_SCROLL,0,#KEYEVENTF_KEYUP,0)
-     EndIf
+  ;
+  x_retval = StringByteLength(string,flags)
+  If x_retval < length Or length = -1
+    If flags = #PB_Unicode
+      x_retval = x_retval+2
+    Else
+      x_retval = x_retval+1
     EndIf
-;*****************************************************
-connectsuccess=1
- If connectsuccess=1
-  If GetGadgetText(#String_HostName) And GetGadgetText(#String_Description)<>""
-    OpenPreferences("vnc.prefs")
-     WritePreferenceString("LastConnect", GetGadgetText(#String_HostName)+","+GetGadgetText(#String_Description))
-      ClosePreferences()
-       connectsuccess=0
   EndIf
- EndIf
-   Else
-     connectsuccess=0
-      WriteLog(myhostname,"Could not capture the uVNC Viewer process, exiting - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-   EndIf
-
-theend:
-
-While WindowEvent():Wend;Refresh status bar
-
-osfailure:
-
-  StatusBarText(#StatusBar0,0,"Ready",#PB_StatusBar_Center)
-   DisableGadget(#Panel_1,0):DisableGadget(#Text_HostName,0):DisableGadget(#Text_Description,0):DisableGadget(#Text_Search,0):DisableGadget(#String_Hostname,0):DisableGadget(#String_Description,0):DisableGadget(#String_Search,0)
-  Else
-    MessageRequester("Error","Cannot connect to "+myhostname+"."+#CRLF$+"Make sure the computer is turned on and connected to the network.",#MB_ICONERROR)
-     WriteLog(myhostname,"")
-      WriteLog(myhostname,"Failed to connect to remote host "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-     WriteLog(myhostname,"")
-    DisableGadget(#Panel_1,0):DisableGadget(#Text_HostName,0):DisableGadget(#Text_Description,0):DisableGadget(#Text_Search,0):DisableGadget(#String_Hostname,0):DisableGadget(#String_Description,0):DisableGadget(#String_Search,0)
+  ;
+  If terminator > ""
+    p = FindString(string,terminator,1)
+    If p > 0
+      string = Left(string,p-1)
+      x_retval = StringByteLength(string+terminator,flags)
+    EndIf
   EndIf
+  ;
+  x_peeks_read = x_retval
+  ProcedureReturn string
 EndProcedure
-
-Procedure ConnectHostButton()
- myhostname=GetGadgetText(#String_HostName)
-  mydescription=GetGadgetText(#String_Description)
-   If SearchListIcon(#Hosts_List,myhostname,@Pos,0)=#True
-     mypos=GetGadgetState(#Hosts_List)
-      SetGadgetText(#String_Description,GetGadgetItemText(#Hosts_List,mypos,1))
-       SelectElement(nslist(),mypos)
-        selection=nslist()\myindexlist
-         CreateConnection(myhostname)
-   Else
-     CreateConnection(myhostname)
-   EndIf
-EndProcedure
-
-Procedure ConnectHostMouse()
- If GetGadgetText(#Hosts_List)<>""
-   myhostname=GetGadgetText(#Hosts_List)
-     SetGadgetText(#String_HostName, myhostname)
-      SetGadgetText(#String_Description,GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),1))
-       CreateConnection(myhostname)
- EndIf 
-EndProcedure
-;}
 ;}
 
 ;  ****************************
@@ -1735,7 +1742,8 @@ PanelGadget(#Panel_1,0,0,453,430)
   ListIconGadget(#Hosts_List,10,0,425,308,"Host Name",150,#PB_ListIcon_AlwaysShowSelection|#PB_ListIcon_FullRowSelect|#PB_ListIcon_MultiSelect)
    AddGadgetColumn(#Hosts_List,1,"Description",226)
     SetGadgetItemAttribute(#Hosts_List,1,#PB_ListIcon_ColumnWidth,130)
-   AddGadgetColumn(#Hosts_List,2,"Index",0);<-80 to view indexes, 0 to hide
+   AddGadgetColumn(#Hosts_List,2,"Index",80);<-80 to view indexes, 0 to hide
+   AddGadgetColumn(#Hosts_List,3,"Pointer",80)
   HyperLinkGadget(#Text_HostName,10,317,65,20,"Host Name:",#Blue)
    BalloonTip(#Window_0,#Text_HostName,"Click to clear the host name field","",#MB_ICONINFORMATION)
    StringGadget(#String_HostName,80,315,250,20,"")
@@ -2122,15 +2130,14 @@ EndIf
              RefreshList()
 
        Case #Connect_Button
-         selection=GetGadgetState(#Hosts_List)
-          selected.s=GetGadgetItemText(#Hosts_List,selection,0)
-           If FindPartWin(selected+" ( ")
-             serverselection.s=GetGadgetItemText(#Hosts_List,selection,0)
-              myhwnd=FindPartWin(serverselection)
-               ShowWindow_(myhwnd,#SW_RESTORE)
-           Else
+         selected.s=GetGadgetText(#String_Hostname)
+          If FindPartWin(selected+" ( ")
+            serverselection.s=GetGadgetItemText(#Hosts_List,selection,0)
+             myhwnd=FindPartWin(serverselection)
+              ShowWindow_(myhwnd,#SW_RESTORE)
+          Else
             ConnectHostButton()
-           EndIf
+          EndIf
 
        Case #String_Search
          If EventType()=#PB_EventType_Change
@@ -2681,6 +2688,13 @@ EndIf
            Case #Hosts_List
              DisableMenuItem(#Menu_PopUp,#PopUp_EditDescription,0)
               DisableMenuItem(#Menu_PopUp,#PopUp_RemoveHost,0)
+;May remove this later
+         If FindPartWin("service mode")=#False
+            DisableMenuItem(#Menu_PopUp,#PopUp_RemoveHost,0)
+         Else
+           DisableMenuItem(#Menu_PopUp,#PopUp_RemoveHost,1)
+         EndIf
+;--------------------
               If GetGadgetText(#Hosts_List)<>""
                totalItemsSelected = SendMessage_(GadgetID(#Hosts_List), #LVM_GETSELECTEDCOUNT, 0, 0)
                If totalItemsSelected=1
@@ -2690,9 +2704,9 @@ EndIf
                     selection=GetGadgetState(#Hosts_List)
                      selected.s=GetGadgetItemText(#Hosts_List,selection,0)
                 If FindPartWin(selected+" (")
-                  DisableMenuItem(#Menu_PopUp, #PopUp_RemoveHost,1)
-                   DisableMenuItem(#Menu_PopUp, #PopUp_Disconnect,0)
-                    DisableMenuItem(#Menu_PopUp,#PopUp_EditDescription,1)
+                  DisableMenuItem(#Menu_PopUp, #PopUp_Disconnect,0)
+                   DisableMenuItem(#Menu_PopUp,#PopUp_EditDescription,0);1
+                    DisableMenuItem(#Menu_PopUp, #PopUp_RemoveHost,1)
                 Else
                   DisableMenuItem(#Menu_PopUp, #PopUp_Disconnect,1)
                 EndIf
@@ -2716,8 +2730,7 @@ EndIf
      Select EventMenu()
 
        Case #Menu_EnterKey; Enter Key Shortcut
-         selection=GetGadgetState(#Hosts_List)
-          selected.s=GetGadgetItemText(#Hosts_List,selection,0)
+         selected.s=GetGadgetText(#Hosts_List)
          If GetGadgetState(#Panel_1)=0
           If GetGadgetText(#String_HostName)<>""
            If FindPartWin(selected+" ( ")
@@ -2734,11 +2747,11 @@ EndIf
          DisconnectFromPC()
 
        Case #PopUp_EditDescription
-          myhostname=GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List))
-           mydescription=GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),1)
-            SetGadgetText(#String_HostName,myhostname)
-             SetGadgetText(#String_Description,mydescription)
-         EditMyDescription("Edit Description")
+         myhostname=GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List))
+          mydescription=GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),1)
+           SetGadgetText(#String_HostName,myhostname)
+            SetGadgetText(#String_Description,mydescription)
+             EditMyDescription("Edit Description")
 
        Case #PopUp_RemoveHost; Remove Host Pop-Up Menu
          RemoveHost()
@@ -2782,8 +2795,8 @@ EndIf
      EndIf
     Else
      closeapp:
-     SetWindowState(#Window_0,#PB_Window_Normal)
-      DeleteDirectory("View","*.vnc",#PB_FileSystem_Force)
+       SetWindowState(#Window_0,#PB_Window_Normal)
+        DeleteDirectory("View","*.vnc",#PB_FileSystem_Force)
       If GetGadgetState(#App_RemoveFilesOnExit)=1
         DeleteDirectory("View", "", #PB_FileSystem_Recursive| #PB_FileSystem_Force)
          DeleteDirectory("Serve", "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
@@ -2873,9 +2886,8 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 1737
-; FirstLine = 163
-; Folding = ADEAAAAAAMAAA+
+; CursorPosition = 5
+; Folding = AAAAIAAAAAAA+
 ; EnableThread
 ; EnableXP
 ; UseIcon = gfx\Icon.ico
