@@ -3,7 +3,7 @@
 ;*          By            *
 ;*     OldNESJunkie       *
 ;*      07/03/2015        *
-;*  Updated 218/2022      *
+;*  Updated 2/18/2022     *
 ;**************************
 
 ;  *******************
@@ -1742,8 +1742,8 @@ PanelGadget(#Panel_1,0,0,453,430)
   ListIconGadget(#Hosts_List,10,0,425,308,"Host Name",150,#PB_ListIcon_AlwaysShowSelection|#PB_ListIcon_FullRowSelect|#PB_ListIcon_MultiSelect)
    AddGadgetColumn(#Hosts_List,1,"Description",226)
     SetGadgetItemAttribute(#Hosts_List,1,#PB_ListIcon_ColumnWidth,130)
-   AddGadgetColumn(#Hosts_List,2,"Index",80);<-80 to view indexes, 0 to hide
-   AddGadgetColumn(#Hosts_List,3,"Pointer",80)
+   AddGadgetColumn(#Hosts_List,2,"Index",0);<-80 to view indexes, 0 to hide
+   AddGadgetColumn(#Hosts_List,3,"Pointer",0);<-80 to view pointers, 0 to hide
   HyperLinkGadget(#Text_HostName,10,317,65,20,"Host Name:",#Blue)
    BalloonTip(#Window_0,#Text_HostName,"Click to clear the host name field","",#MB_ICONINFORMATION)
    StringGadget(#String_HostName,80,315,250,20,"")
@@ -1836,7 +1836,7 @@ AddGadgetItem(#Panel_1,-1,"About")
                                          "by" + #CRLF$ +
 	                                       "Daniel Ford" + #CRLF$ +
                                          "oldnesjunkie@gmail.com" + #CRLF$ +
-	                                       "Version 1.0.6 - December 16, 2021" + #CRLF$ +
+	                                       "Version 1.0.7 - February 18, 2022" + #CRLF$ +
                                          "Uses ADFind version 1.56.00" + #CRLF$ +
                                          "Uses PAExec Version 1.28" + #CRLF$ +
                                          "Uses UltraVNC Version 1.3.6.0" + #CRLF$ + #CRLF$ +
@@ -2886,7 +2886,7 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 5
+; CursorPosition = 1838
 ; Folding = AAAAIAAAAAAA+
 ; EnableThread
 ; EnableXP
