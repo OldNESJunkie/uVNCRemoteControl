@@ -1817,9 +1817,9 @@ AddGadgetItem(#Panel_1,-1,"Program Options")
        CheckBoxGadget(#App_SortHostsOnExit,95,130,150,20,"Sort Hosts On Exit (A-Z)")
         ButtonGadget(#App_ClearHostsList,15,350,130,30,"Clear Hosts List")
          ButtonGadget(#App_ImportFromAD,162,350,131,30,"Import Hosts from AD")
-          ButtonGadget(#App_Help,310,350,120,30,"Help")
+          ButtonGadget(#App_Help,15,260,80,30,"Help")
            If FileSize("Update uVNC.exe")<>-1
-            ButtonGadget(#App_Update,15,350,120,30,"Check for Update")
+            ButtonGadget(#App_Update,310,350,120,30,"Check for Update")
            EndIf
 CloseGadgetList()
 ;}
@@ -2705,7 +2705,7 @@ EndIf
                      selected.s=GetGadgetItemText(#Hosts_List,selection,0)
                 If FindPartWin(selected+" (")
                   DisableMenuItem(#Menu_PopUp, #PopUp_Disconnect,0)
-                   DisableMenuItem(#Menu_PopUp,#PopUp_EditDescription,0);1
+                   DisableMenuItem(#Menu_PopUp,#PopUp_EditDescription,1)
                     DisableMenuItem(#Menu_PopUp, #PopUp_RemoveHost,1)
                 Else
                   DisableMenuItem(#Menu_PopUp, #PopUp_Disconnect,1)
@@ -2886,7 +2886,7 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 1838
+; CursorPosition = 7
 ; Folding = AAAAIAAAAAAA+
 ; EnableThread
 ; EnableXP
