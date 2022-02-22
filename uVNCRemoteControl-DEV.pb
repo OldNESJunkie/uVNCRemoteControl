@@ -3,7 +3,7 @@
 ;*          By            *
 ;*     OldNESJunkie       *
 ;*      07/03/2015        *
-;*  Updated 2/18/2022     *
+;*  Updated 2/22/2022     *
 ;**************************
 
 ;  *******************
@@ -1305,7 +1305,7 @@ ResetList(nslist())
 EndProcedure
 
 Procedure RemoveHost()
-Protected clearcurrenthost, ni, Result, NbItems
+Protected clearcurrenthost, ni, Result, NbItems, mylistsize
 If totalItemsSelected=1
   clearcurrenthost=MessageRequester("","Are you sure you wish to remove "+GetGadgetText(#Hosts_List)+" ?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
  If clearcurrenthost=#PB_MessageRequester_Yes
@@ -1836,7 +1836,7 @@ AddGadgetItem(#Panel_1,-1,"About")
                                          "by" + #CRLF$ +
 	                                       "Daniel Ford" + #CRLF$ +
                                          "oldnesjunkie@gmail.com" + #CRLF$ +
-	                                       "Version 1.0.7 - February 18, 2022" + #CRLF$ +
+	                                       "Version 1.0.8 - February 22, 2022" + #CRLF$ +
                                          "Uses ADFind version 1.56.00" + #CRLF$ +
                                          "Uses PAExec Version 1.28" + #CRLF$ +
                                          "Uses UltraVNC Version 1.3.6.0" + #CRLF$ + #CRLF$ +
@@ -2688,13 +2688,19 @@ EndIf
            Case #Hosts_List
              DisableMenuItem(#Menu_PopUp,#PopUp_EditDescription,0)
               DisableMenuItem(#Menu_PopUp,#PopUp_RemoveHost,0)
-;May remove this later
+;Disable RemoveHost if connected to any hosts
          If FindPartWin("service mode")=#False
             DisableMenuItem(#Menu_PopUp,#PopUp_RemoveHost,0)
          Else
            DisableMenuItem(#Menu_PopUp,#PopUp_RemoveHost,1)
          EndIf
-;--------------------
+;Disable RemoveHost if list sizes do not match (Filtered by search)
+         myitems=CountGadgetItems(#Hosts_List)
+          mylistsize=ListSize(nslist())
+         If myitems<>mylistsize
+           DisableMenuItem(#Menu_PopUp,#PopUp_RemoveHost,1)
+         EndIf
+
               If GetGadgetText(#Hosts_List)<>""
                totalItemsSelected = SendMessage_(GadgetID(#Hosts_List), #LVM_GETSELECTEDCOUNT, 0, 0)
                If totalItemsSelected=1
@@ -2754,7 +2760,7 @@ EndIf
              EditMyDescription("Edit Description")
 
        Case #PopUp_RemoveHost; Remove Host Pop-Up Menu
-         RemoveHost()
+          RemoveHost()
 
      EndSelect
 ;}
