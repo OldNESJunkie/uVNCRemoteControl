@@ -327,7 +327,7 @@ checkvnc=0; Used when checking to see if the UltraVNC service is started on remo
 success=0; Used to add host to list only if connection was successful
 connectsuccess=0; Used to save if last connection attempt was successful
 While WaitWindowEvent(1)
-DisableGadget(#Panel_1,1):DisableGadget(#Text_HostName,1):DisableGadget(#Text_Description,1):DisableGadget(#Text_Search,1):DisableGadget(#String_Hostname,1):DisableGadget(#String_Description,1):DisableGadget(#String_Search,1)
+DisableGadget(#Panel_1,1):DisableGadget(#Text_HostName,1):DisableGadget(#Text_Description,1):DisableGadget(#Text_Search,1):DisableGadget(#String_Hostname,1):DisableGadget(#String_Description,1):DisableGadget(#String_Search,1):DisableGadget(#Connect_Button,1)
 Wend
 If FindString(myhostname,".",1)>0
   pingresult=PingHost(myhostname,1000,"")
@@ -472,13 +472,13 @@ While WindowEvent():Wend;Refresh status bar
 osfailure:
 
   StatusBarText(#StatusBar0,0,"Ready",#PB_StatusBar_Center)
-   DisableGadget(#Panel_1,0):DisableGadget(#Text_HostName,0):DisableGadget(#Text_Description,0):DisableGadget(#Text_Search,0):DisableGadget(#String_Hostname,0):DisableGadget(#String_Description,0):DisableGadget(#String_Search,0)
+   DisableGadget(#Panel_1,0):DisableGadget(#Text_HostName,0):DisableGadget(#Text_Description,0):DisableGadget(#Text_Search,0):DisableGadget(#String_Hostname,0):DisableGadget(#String_Description,0):DisableGadget(#String_Search,0):DisableGadget(#Connect_Button,0)
   Else
     MessageRequester("Error","Cannot connect to "+myhostname+"."+#CRLF$+"Make sure the computer is turned on and connected to the network.",#MB_ICONERROR)
      WriteLog(myhostname,"")
       WriteLog(myhostname,"Failed to connect to remote host "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
      WriteLog(myhostname,"")
-    DisableGadget(#Panel_1,0):DisableGadget(#Text_HostName,0):DisableGadget(#Text_Description,0):DisableGadget(#Text_Search,0):DisableGadget(#String_Hostname,0):DisableGadget(#String_Description,0):DisableGadget(#String_Search,0)
+    DisableGadget(#Panel_1,0):DisableGadget(#Text_HostName,0):DisableGadget(#Text_Description,0):DisableGadget(#Text_Search,0):DisableGadget(#String_Hostname,0):DisableGadget(#String_Description,0):DisableGadget(#String_Search,0):DisableGadget(#Connect_Button,0)
   EndIf
 EndProcedure
 
@@ -2891,9 +2891,8 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 878
-; FirstLine = 47
-; Folding = ABACIAAAAAAA+
+; CursorPosition = 17
+; Folding = AAAAIAAAAAAA+
 ; EnableThread
 ; EnableXP
 ; UseIcon = gfx\Icon.ico
