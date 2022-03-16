@@ -5,7 +5,7 @@
 ;*      07/03/2015        *
 ;*  Updated 2/22/2022     *
 ;**************************
-
+;FIXME: Sorting the hosts list by column does not sort properly if a new host is added until closing and re-opening the application due to indexing
 ;  *******************
 ;  * Embed Help Text *
 ;{ *******************
@@ -606,7 +606,7 @@ Procedure CreateServerINIFile(dir.s)
   EndIf
 ;***************
     WriteStringN(File, "FTUserImpersonation=1", #PB_Ascii);Impersonate as desktop user,0=use 'system' account (no access to mapped drives, security holes)
-    WriteStringN(File, "BlankMonitorEnabled=0", #PB_Ascii);Allow viewer to blank the screen
+    WriteStringN(File, "BlankMonitorEnabled=1", #PB_Ascii);Allow viewer to blank the screen
 ; Capture Semi-Transparent Windows
   If GetGadgetState(#Server_CaptureSemiTransparentWindows)<>0
     WriteStringN(File, "CaptureAlphaBlending=1", #PB_Ascii);Capture semi-transparent windows
@@ -614,7 +614,7 @@ Procedure CreateServerINIFile(dir.s)
     WriteStringN(File, "CaptureAlphaBlending=0", #PB_Ascii)
   EndIf
 ;*********************************
-    WriteStringN(File, "BlackAlphaBlending=0", #PB_Ascii);No pwr mgr to black window, layer a window on top and capture windows below. Custom background.bmp for custom lock screen
+    WriteStringN(File, "BlackAlphaBlending=1", #PB_Ascii);No pwr mgr to black window, layer a window on top and capture windows below. Custom background.bmp for custom lock screen
     WriteStringN(File, "BlankInputsOnly=1", #PB_Ascii);Keeps the monitor from blanking, only disables KB & Mouse input
     WriteStringN(File, "DefaultScale=1", #PB_Ascii)
     WriteStringN(File, "primary=1", #PB_Ascii)
@@ -873,9 +873,10 @@ Procedure DisconnectFromPC()
   disc=MessageRequester("Disconnect","Do you wish to disconnect from "+GetGadgetItemText(#Hosts_List,selection)+"?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION)
   If disc=#PB_MessageRequester_Yes
     serverselection.s=GetGadgetItemText(#Hosts_List,selection,0)
-     RunProgram("taskkill","/FI "+Chr(34)+"WINDOWTITLE eq "+serverselection+"*"+Chr(34)+" /t","",#PB_Program_Hide)
-      SetGadgetText(#String_HostName,"")
-       SetGadgetText(#String_Description,"")
+     myhwnd=FindPartWin(serverselection+" ( "+GetIPAddress(serverselection)+" ) - service mode ")
+      SendMessage_(myhwnd,#WM_CLOSE,0,0)
+       SetGadgetText(#String_HostName,"")
+        SetGadgetText(#String_Description,"")
   EndIf
 EndProcedure
 
@@ -1837,9 +1838,9 @@ AddGadgetItem(#Panel_1,-1,"About")
 	                                       "Daniel Ford" + #CRLF$ +
                                          "oldnesjunkie@gmail.com" + #CRLF$ +
 	                                       "Version 1.0.8 - February 22, 2022" + #CRLF$ +
-                                         "Uses ADFind version 1.56.00" + #CRLF$ +
+                                         "Uses ADFind version 1.57.00" + #CRLF$ +
                                          "Uses PAExec Version 1.28" + #CRLF$ +
-                                         "Uses UltraVNC Version 1.3.6.0" + #CRLF$ + #CRLF$ +
+                                         "Uses UltraVNC Version 1.3.8.1" + #CRLF$ + #CRLF$ +
                                          "Created with the following from the PureBasic Forums:"+#CRLF$+
                                          "FindStringRev by skywalk"+#CRLF$+
                                          "ListIcon Sort by netmaestro"+#CRLF$+
@@ -2671,10 +2672,9 @@ EndIf
            Case #Hosts_List
              selection=GetGadgetState(#Hosts_List)
               selected.s=GetGadgetItemText(#Hosts_List,selection,0)
-              If FindPartWin(selected+" ( ")
-                serverselection.s=GetGadgetItemText(#Hosts_List,selection,0)
-                 myhwnd=FindPartWin(serverselection)
-                  ShowWindow_(myhwnd,#SW_RESTORE)
+              If FindPartWin(selected+" ( "+GetIPAddress(selected)+" ) - service mode ")
+                myhwnd=FindPartWin(selected+" ( "+GetIPAddress(selected)+" ) - service mode ")
+                 ShowWindow_(myhwnd,#SW_RESTORE)
               Else
                 ConnectHostMouse()
               EndIf
@@ -2739,10 +2739,9 @@ EndIf
          selected.s=GetGadgetText(#Hosts_List)
          If GetGadgetState(#Panel_1)=0
           If GetGadgetText(#String_HostName)<>""
-           If FindPartWin(selected+" ( ")
-             serverselection.s=GetGadgetItemText(#Hosts_List,selection,0)
-              myhwnd=FindPartWin(serverselection)
-               ShowWindow_(myhwnd,#SW_RESTORE)
+           If FindPartWin(selected+" ( "+GetIPAddress(selected)+" ) - service mode ")
+             myhwnd=FindPartWin(selected+" ( "+GetIPAddress(selected)+" ) - service mode ")
+              ShowWindow_(myhwnd,#SW_RESTORE)
            Else
             ConnectHostButton()
            EndIf
@@ -2892,8 +2891,9 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 7
-; Folding = AAAAIAAAAAAA+
+; CursorPosition = 878
+; FirstLine = 47
+; Folding = ABACIAAAAAAA+
 ; EnableThread
 ; EnableXP
 ; UseIcon = gfx\Icon.ico
