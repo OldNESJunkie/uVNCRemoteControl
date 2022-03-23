@@ -6,6 +6,7 @@
 ;*  Updated 2/22/2022     *
 ;**************************
 ;FIXME: Sorting the hosts list by column does not sort properly if a new host is added until closing and re-opening the application due to indexing
+
 ;  *******************
 ;  * Embed Help Text *
 ;{ *******************
@@ -1298,11 +1299,13 @@ Procedure PingHost(Address.s,PING_TIMEOUT=1000,strMessage.s = "Echo This Informa
 EndProcedure
 
 Procedure RefreshList()
+SendMessage_(GadgetID(#Hosts_List),#WM_SETREDRAW, #False, 0)
 ClearGadgetItems(#Hosts_List)
 ResetList(nslist())
  While NextElement(nslist())
    AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist+#LF$+nslist()\mypointer)
  Wend
+SendMessage_(GadgetID(#Hosts_List),#WM_SETREDRAW, #True, 0)
 EndProcedure
 
 Procedure RemoveHost()
@@ -2791,6 +2794,8 @@ EndIf
 ;  *************************
 ;{ ***Close Window Events***
    Case #PB_Event_CloseWindow
+     RefreshList()
+      SaveFile()
     If FindPartWin("- service mode") Or FindPartWin("- connection dropped")
      myanswer=MessageRequester("Warning","There are active uVNC Viewer sessions."+#CRLF$+"Do you want to close the application?"+#CRLF$+"This will leave uVNC running on the remote computer(s)."+#CRLF$+"You will have to reconnect and close normally to remove the service.",#PB_MessageRequester_YesNo|#MB_ICONWARNING)
      If myanswer=#PB_MessageRequester_Yes
@@ -2891,7 +2896,7 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 17
+; CursorPosition = 8
 ; Folding = AAAAIAAAAAAA+
 ; EnableThread
 ; EnableXP
