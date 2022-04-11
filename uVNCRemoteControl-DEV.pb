@@ -1375,18 +1375,20 @@ NbItems=CountGadgetItems(#Hosts_List)
 EndProcedure
 
 Procedure SearchMe(search.s)
+SendMessage_(GadgetID(#Hosts_List),#WM_SETREDRAW, #False, 0)
 ClearGadgetItems(#Hosts_List)
 If ListSize(nslist())>0
   ResetList(nslist())
-    While NextElement(nslist())
-     If FindStringRev(nslist()\myhostnamelist,search,1)
-       AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist+#LF$+nslist()\mypointer)
-     ElseIf FindStringRev(nslist()\mydescriptionlist,search,1)
-       AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist+#LF$+nslist()\mypointer)
-     ElseIf GetGadgetText(#String_Search)=""
-       AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist+#LF$+nslist()\mypointer)
-     EndIf
-    Wend
+   While NextElement(nslist())
+    If FindStringRev(nslist()\myhostnamelist,search,1)
+      AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist+#LF$+nslist()\mypointer)
+    ElseIf FindStringRev(nslist()\mydescriptionlist,search,1)
+      AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist+#LF$+nslist()\mypointer)
+    ElseIf GetGadgetText(#String_Search)=""
+      AddGadgetItem(#Hosts_List, -1, nslist()\myhostnamelist+#LF$+nslist()\mydescriptionlist+#LF$+nslist()\myindexlist+#LF$+nslist()\mypointer)
+    EndIf
+   Wend
+SendMessage_(GadgetID(#Hosts_List),#WM_SETREDRAW, #True, 0)
 EndIf
 EndProcedure
 
