@@ -1202,6 +1202,7 @@ myresult=MessageRequester("AD Import","Are you sure you wish to import from AD?"
      ClearList(nslist())
       SetGadgetText(#String_HostName, "")
        SetGadgetText(#String_Description, "")
+        SetGadgetText(#String_Search, "")
         DeleteFile("hosts.dat", #PB_FileSystem_Force)
        RunProgram("cmd","/c adfind -csv -f "+Chr(34)+"(&(objectCategory=computer)(!userAccountControl:1.2.840.113556.1.4.803:=2)(!primaryGroupID=516)(!operatingsystem=Windows Server*))"+Chr(34)+" -sl -nodn name description -nocsvheader -csvnoq > PC.csv","",#PB_Program_Hide|#PB_Program_Wait)
       FillListIcon(#Hosts_List,"PC.csv")
@@ -1209,7 +1210,7 @@ myresult=MessageRequester("AD Import","Are you sure you wish to import from AD?"
     DeleteFile("pc.csv",#PB_FileSystem_Force)
    StatusBarText(#StatusBar0,0,"Ready",#PB_StatusBar_Center)
 ;Autosize the listicon columns
-SetColumnWidths()
+  SetColumnWidths()
  Else
    ;cancelled
  EndIf
@@ -2902,7 +2903,7 @@ DataSection
 EndDataSection 
 ;}
 ; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 8
+; CursorPosition = 1212
 ; Folding = AAAAIAAAAAAA+
 ; EnableThread
 ; EnableXP
