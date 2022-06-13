@@ -1313,6 +1313,7 @@ Protected clearcurrenthost, ni, Result, NbItems, mylistsize
 If totalItemsSelected=1
   clearcurrenthost=MessageRequester("","Are you sure you wish to remove "+GetGadgetText(#Hosts_List)+" ?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
  If clearcurrenthost=#PB_MessageRequester_Yes
+SendMessage_(GadgetID(#Hosts_List),#WM_SETREDRAW, #False, 0)
    SelectElement(nslist(),Val(GetGadgetItemText(#Hosts_List,GetGadgetState(#Hosts_List),2)))
     DeleteElement(nslist(),1)
      RemoveGadgetItem(#Hosts_List,GetGadgetState(#Hosts_List))
@@ -1324,10 +1325,12 @@ If totalItemsSelected=1
      ClearGadgetItems(#Hosts_List)
     FillListIcon(#Hosts_List,"hosts.dat")
    totalItemsSelected=0
+SendMessage_(GadgetID(#Hosts_List),#WM_SETREDRAW, #True, 0)
  EndIf
 Else
  clearcurrenthost=MessageRequester("","Are you sure you wish to remove all selected items ?",#PB_MessageRequester_YesNo|#MB_ICONQUESTION|#MB_DEFBUTTON2)
  If clearcurrenthost=#PB_MessageRequester_Yes
+SendMessage_(GadgetID(#Hosts_List),#WM_SETREDRAW, #False, 0)
    NbItems=CountGadgetItems(#Hosts_List)
    For ni = NbItems -1 To 0 Step -1
     result=GetGadgetItemState(#Hosts_List,ni)
@@ -1345,6 +1348,7 @@ Else
      ClearGadgetItems(#Hosts_List)
     FillListIcon(#Hosts_List,"hosts.dat")
    totalItemsSelected=0
+SendMessage_(GadgetID(#Hosts_List),#WM_SETREDRAW, #True, 0)
  EndIf
 EndIf
 EndProcedure
@@ -2781,7 +2785,7 @@ EndIf
            index = SendMessage_(GadgetID(#Hosts_List),#LVM_GETHOTITEM ,0,0)
             SendMessage_(GadgetID(#Hosts_List),#LVM_SUBITEMHITTEST ,0,@is)
       If is\iItem >= 0 And index >= 0
-        SetActiveGadget(#Hosts_List)
+        ;SetActiveGadget(#Hosts_List)
          SetGadgetItemColor(#Hosts_List,olditem,#PB_Gadget_BackColor,-1)
           SetGadgetItemColor(#Hosts_List,is\iItem,#PB_Gadget_BackColor,RGB(229,243,255))
            olditem = is\iItem
