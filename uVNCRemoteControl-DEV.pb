@@ -5,7 +5,7 @@
 ;*      07/03/2015        *
 ;*  Updated 2/22/2022     *
 ;**************************
-;FIXME: Sorting the hosts list by column does not sort properly if a new host is added until closing and re-opening the application due to indexing
+;FIXME: Sorting the hosts list by column not sorting properly when a new host is added until closing and re-opening the application due to indexing
 
 ;  *******************
 ;  * Embed Help Text *
@@ -347,8 +347,8 @@ EndIf
         WriteLog(myhostname,"Successfully created all of the required local files - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
          StatusBarText(#StatusBar0,0,"Checking for uVNC on "+myhostname,#PB_StatusBar_Center)
           WriteLog(myhostname,"Checking for running uVNC on remote computer "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
-result=InitNetwork()
-  If result<>0
+;result=InitNetwork()
+  ;If result<>0
     isopen=OpenNetworkConnection(myhostname,5900,#PB_Network_TCP,1000)
    If isopen=0
      StatusBarText(#StatusBar0,0,"No uVNC found on "+myhostname,#PB_StatusBar_Center)
@@ -358,7 +358,7 @@ result=InitNetwork()
       WriteLog(myhostname,"uVNC found running, removing uVNC on remote computer "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
        RemoveService(myhostname)
    EndIf
-  EndIf
+  ;EndIf
       CreateViewerConfigFile(myhostname)
      While WindowEvent():Wend;Refresh status bar
       StatusBarText(#StatusBar0,0,"Copying files to "+myhostname,#PB_StatusBar_Center)
@@ -404,8 +404,8 @@ result=InitNetwork()
 
 checkservice:
 
-result=InitNetwork()
- If result<>0
+;result=InitNetwork()
+ ;If result<>0
    isopen=OpenNetworkConnection(myhostname,5900,#PB_Network_TCP,1000)
    If isopen=0
      WriteLog(myhostname,"Re-checking uVNC service status on "+myhostname+" - "+FormatDate("%mm/%dd/%yyyy"+" "+"%hh:%ii:%ss" ,Date()))
@@ -430,7 +430,7 @@ result=InitNetwork()
       While WindowEvent():Wend;Refresh status bar
     Goto carryon
   EndIf
- EndIf
+ ;EndIf
 
 carryon:
 
@@ -532,6 +532,12 @@ CreateFile(10,"paexec.exe")
  WriteData(10,?remotestart,?remoteend-?remotestart)
 CloseFile(10)
 EndIf
+
+; If FileSize("get-ad.ps1")=-1
+; CreateFile(10,"get-ad.ps1")
+;  WriteData(10,?getadstart,?getadend-?getadstart)
+; CloseFile(10)
+; EndIf
 EndProcedure
 
 Procedure.s CreatePassword()
@@ -1195,22 +1201,32 @@ EndSelect
 EndProcedure
 
 Procedure ImportAD()
+
+;own PS:
+;get-adcomputer -filter {OperatingSystem -ne '*Windows Server*'} -properties * | where Enabled -EQ $True | select name, description |export-csv -path c:\Temp\ad.csv -notypeinformation
+
 myresult=MessageRequester("AD Import","Are you sure you wish to import from AD?"+#CRLF$+"No Domain Controllers, Server OS or Disabled Computers."+#CRLF$+"This will clear your current hosts List.",#PB_MessageRequester_YesNo|#MB_ICONWARNING)
  If myresult=#PB_MessageRequester_Yes
+If FileSize("get-ad.ps1")=-1
+CreateFile(10,"get-ad.ps1")
+ WriteData(10,?getadstart,?getadend-?getadstart)
+CloseFile(10)
+EndIf
    StatusBarText(#StatusBar0,0,"Please wait, importing from AD...",#PB_StatusBar_Center)
     ClearGadgetItems(#Hosts_List)
      ClearList(nslist())
       SetGadgetText(#String_HostName, "")
        SetGadgetText(#String_Description, "")
         SetGadgetText(#String_Search, "")
-        DeleteFile("hosts.dat", #PB_FileSystem_Force)
-       RunProgram("cmd","/c adfind -csv -f "+Chr(34)+"(&(objectCategory=computer)(!userAccountControl:1.2.840.113556.1.4.803:=2)(!primaryGroupID=516)(!operatingsystem=Windows Server*))"+Chr(34)+" -sl -nodn name description -nocsvheader -csvnoq > PC.csv","",#PB_Program_Hide|#PB_Program_Wait)
-      FillListIcon(#Hosts_List,"PC.csv")
-     SaveFile()
-    DeleteFile("pc.csv",#PB_FileSystem_Force)
-   StatusBarText(#StatusBar0,0,"Ready",#PB_StatusBar_Center)
-;Autosize the listicon columns
-  SetColumnWidths()
+         DeleteFile("hosts.dat", #PB_FileSystem_Force)
+          RunProgram("powershell","-ExecutionPolicy Bypass .\Get-AD.ps1","",#PB_Program_Hide|#PB_Program_Wait)
+          Sortfile("PC.csv")
+         FillListIcon(#Hosts_List,"PC.csv")
+        SaveFile()
+       DeleteFile(GetCurrentDirectory()+"pc.csv",#PB_FileSystem_Force)
+      DeleteFile(GetCurrentDirectory()+"get-ad.ps1",#PB_FileSystem_Force)
+     StatusBarText(#StatusBar0,0,"Ready",#PB_StatusBar_Center)
+   SetColumnWidths();Autosize the listicon columns
  Else
    ;cancelled
  EndIf
@@ -2076,9 +2092,9 @@ EndIf
 FillListIcon(#Hosts_List,"hosts.dat")
 SetIcons()
 SetColumnWidths()
-If FileSize("adfind.exe")=-1
-  HideGadget(#App_ImportFromAD,1)
-EndIf
+;If FileSize("adfind.exe")=-1
+;  HideGadget(#App_ImportFromAD,1)
+;EndIf
 ;}
 
 Repeat
@@ -2900,11 +2916,16 @@ DataSection
   recycle:
   IncludeBinary "gfx\recycle.ico"
 
+  getadstart:
+  IncludeBinary "Includes\get-ad.ps1"
+  getadend:
+
 EndDataSection 
 ;}
-; IDE Options = PureBasic 5.73 LTS (Windows - x64)
-; CursorPosition = 1212
-; Folding = AAAAIAAAAAAA+
+; IDE Options = PureBasic 6.00 LTS (Windows - x64)
+; CursorPosition = 1228
+; FirstLine = 80
+; Folding = ABAAICAAAAAA+
 ; EnableThread
 ; EnableXP
 ; UseIcon = gfx\Icon.ico
@@ -2915,10 +2936,10 @@ EndDataSection
 ; VersionField0 = 1.0.0.0
 ; VersionField1 = 1.0.0.0
 ; VersionField2 = OldNESJunkie
-; VersionField3 = VNC Remote Control
+; VersionField3 = uVNC Remote Control
 ; VersionField4 = 1.0
 ; VersionField5 = 1.0
-; VersionField6 = VNC Remote Control
-; VersionField7 = VNCRemoteControl
-; VersionField8 = VNCRemoteControl.exe
-; VersionField14 = http://www.oldnesjunkie.com
+; VersionField6 = uVNC Remote Control
+; VersionField7 = uVNCRemoteControl
+; VersionField8 = uVNCRemoteControl.exe
+; VersionField14 = https://www.oldnesjunkie.com
